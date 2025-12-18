@@ -4,26 +4,24 @@ import { Message } from '../types';
 import { getChloeResponse } from '../geminiService';
 
 const defaultTypingStatuses = [
-  "Mepa is analyzing your energy...",
-  "Mepa is sensing a disturbance...",
-  "Mepa is charging her crystals...",
-  "Mepa is protecting her peace...",
-  "Mepa is reading your aura...",
-  "Mepa is typing (unbothered)...",
-  "Mepa is observing the chaos...",
-  "Mepa is manifesting success...",
-  "Mepa is blocking negative vibes...",
-  "Mepa is sipping herbal tea...",
-  "Mepa is not impressed..."
+  "Mepa is judging your aura (it's mid)...",
+  "Mepa is preparing a reality check...",
+  "Mepa is charging her crystals to block you...",
+  "Mepa is rolling her eyes...",
+  "Mepa is reading your low-frequency vibes...",
+  "Mepa is typing (unbothered, unlike you)...",
+  "Mepa is manifesting your exit...",
+  "Mepa is blocking potential dusties...",
+  "Mepa is not impressed. At all.",
+  "Mepa is sensing extreme basicness..."
 ];
 
 const keywordTypingStatuses: Record<string, string[]> = {
-  fashion: ["Mepa is judging the fabric quality...", "Mepa is sensing polyester...", "Mepa demands haute couture..."],
-  money: ["Mepa is visualizing abundance...", "Mepa is checking the empire's growth...", "Mepa smells success..."],
-  gossip: ["Mepa is listening...", "Mepa requires receipts...", "Mepa is bored by petty drama..."],
-  hustle: ["Mepa respects the drive...", "Mepa is building the brand...", "Mepa is leveling up..."],
-  love: ["Mepa is doing a background check...", "Mepa says block him...", "Mepa knows his zodiac sign..."],
-  men: ["Mepa smells a dusty...", "Mepa is preparing a reality check...", "Mepa has zero tolerance for disrespect..."]
+  fashion: ["Mepa is sensing polyester energy...", "Mepa is judging your fast-fashion choices...", "Mepa demands real luxury..."],
+  money: ["Mepa is checking if you're actually high-value...", "Mepa smells an empty wallet...", "Mepa only talks in six figures..."],
+  guapa: ["Mepa is shattering Guapa's mid aura...", "Mepa is humbling the local dusty...", "Mepa says Guapa sit down..."],
+  psycho: ["Mepa is diagnosing Psycho's lack of aura...", "Mepa is preparing to block Yuki...", "Mepa says Serife is vibrating low..."],
+  men: ["Mepa smells a scrote...", "Mepa is launching the 'Block Him' protocol...", "Mepa has zero time for dusty behavior..."]
 };
 
 const PersonalityView: React.FC = () => {
@@ -31,7 +29,7 @@ const PersonalityView: React.FC = () => {
     {
       id: '1',
       sender: 'bot',
-      content: "I'm Mepa. I represent the divine feminine energy. Don't waste my time with low vibrations. What do you want? 🥀",
+      content: "I'm Mepa. Don't waste my time with low vibrations. What do you want? 🥀",
       timestamp: new Date()
     }
   ]);
@@ -168,8 +166,8 @@ const PersonalityView: React.FC = () => {
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
             <div className={`max-w-[75%] px-6 py-4 rounded-[1.75rem] leading-relaxed shadow-sm ${msg.sender === 'user'
-                ? 'bg-slate-900 text-white rounded-tr-none shadow-slate-200'
-                : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none font-medium'
+              ? 'bg-slate-900 text-white rounded-tr-none shadow-slate-200'
+              : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none font-medium'
               }`}>
               <p className="text-sm">{msg.content}</p>
               <div className={`flex items-center justify-end mt-2 space-x-1 ${msg.sender === 'user' ? 'text-slate-400' : 'text-slate-300'}`}>
