@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [servers, setServers] = useState<DiscordServer[]>([]);
   const [selectedServer, setSelectedServer] = useState<DiscordServer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [logs, setLogs] = useState<LogEntry[]>(() => {
     const saved = localStorage.getItem('mepa_logs');
@@ -35,16 +36,31 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) fetchDiscordData(session);
-      else setIsLoading(false);
-    });
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
       setSession(session);
-      if (session) fetchDiscordData(session);
-      else {
+      if (session) {
+        await fetchDiscordData(session);
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+
+      // Only fetch if session actually changed to a logged-in state
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(session);
+        if (session) fetchDiscordData(session);
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
         setProfile(null);
         setServers([]);
         setSelectedServer(null);
@@ -52,10 +68,19 @@ const App: React.FC = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchDiscordData = async (session: any) => {
+    if (!session?.provider_token) {
+      console.warn("No provider token found in session.");
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Fetch Profile
@@ -70,12 +95,28 @@ const App: React.FC = () => {
       const response = await fetch('https://discord.com/api/users/@me/guilds', {
         headers: { Authorization: `Bearer ${session.provider_token}` }
       });
+
+      if (response.status === 429) {
+        const err = "Rate limited by Discord. Mepa is annoyed. 🙄 Try again in a minute.";
+        setError(err);
+        console.error(err);
+        return;
+      }
+
+      setError(null);
       const guilds = await response.json();
+
+      // Safety check: Discord might return an error object instead of an array
+      if (!Array.isArray(guilds)) {
+        console.error("Guilds response is not an array:", guilds);
+        setServers([]);
+        return;
+      }
 
       // Filter for Admin permissions (0x8)
       const adminServers = guilds.filter((g: any) => (parseInt(g.permissions) & 0x8) === 0x8);
 
-      // Simulate bot presence for now - in real app would check DB
+      // Simulate bot presence for now
       const mappedServers = adminServers.map((s: any) => ({
         ...s,
         hasBot: s.id === '1319041280387420180' // Placeholder ID
@@ -114,7 +155,7 @@ const App: React.FC = () => {
     );
 
     if (!session) return <DiscordLoginView />;
-    if (!selectedServer) return <ServerSelectionView servers={servers} onSelect={setSelectedServer} />;
+    if (!selectedServer) return <ServerSelectionView servers={servers} onSelect={setSelectedServer} error={error} />;
 
     switch (activeTab) {
       case BotTab.DASHBOARD: return <DashboardView logs={logs} selectedServer={selectedServer} />;

@@ -5,9 +5,10 @@ import { DiscordServer } from '../types';
 interface ServerSelectionViewProps {
     servers: DiscordServer[];
     onSelect: (server: DiscordServer) => void;
+    error?: string | null;
 }
 
-const ServerSelectionView: React.FC<ServerSelectionViewProps> = ({ servers, onSelect }) => {
+const ServerSelectionView: React.FC<ServerSelectionViewProps> = ({ servers, onSelect, error }) => {
     const [search, setSearch] = useState('');
 
     const filteredServers = servers.filter(s =>
@@ -21,6 +22,16 @@ const ServerSelectionView: React.FC<ServerSelectionViewProps> = ({ servers, onSe
                     <h1 className="text-5xl font-bold tracking-tight">Select a server</h1>
                     <p className="text-slate-400 text-lg">You have access to {servers.length} servers.</p>
                 </div>
+
+                {error && (
+                    <div className="bg-red-500/10 border border-red-500/50 p-6 rounded-2xl flex items-center space-x-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div className="text-3xl">🙄</div>
+                        <div className="flex-1">
+                            <h4 className="font-bold text-red-500 uppercase text-xs tracking-widest mb-1">Mepa is Annoyed</h4>
+                            <p className="text-sm text-red-100">{error}</p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative flex-1">
