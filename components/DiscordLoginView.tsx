@@ -21,8 +21,8 @@ const DiscordLoginView: React.FC = () => {
 
             <div className="relative z-10 max-w-lg w-full p-12 bg-white/5 backdrop-blur-3xl rounded-[4rem] border border-white/10 shadow-2xl text-center space-y-12">
                 <div className="space-y-4">
-                    <div className="w-24 h-24 bg-linear-to-tr from-pink-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center text-5xl shadow-2xl animate-bounce">
-                        🔮
+                    <div className="w-24 h-24 bg-linear-to-tr from-pink-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl animate-bounce overflow-hidden border-2 border-white/20">
+                        <img src="/logo.png" alt="Mepa Logo" className="w-full h-full object-cover" />
                     </div>
                     <h1 className="text-5xl font-serif font-bold text-white italic tracking-tight">Mepa Bot</h1>
                     <p className="text-slate-400 font-medium">High maintenance, but worth it. Log in to manage your empire.</p>

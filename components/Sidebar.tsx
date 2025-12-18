@@ -33,9 +33,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 z-50">
       {/* Brand & Server Switcher */}
       <div className="p-6 border-b border-slate-100 bg-white space-y-4">
-        <h1 className="text-xl font-serif font-bold text-slate-900 italic tracking-tight px-2">
-          mepa <span className="text-purple-500 text-[10px] block not-italic font-sans font-bold uppercase tracking-[0.2em] mt-0.5">high maintenance</span>
-        </h1>
+        <div className="flex items-center space-x-3 px-2">
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg border border-slate-100 shrink-0">
+            <img src="/logo.png" alt="Mepa Logo" className="w-full h-full object-cover" />
+          </div>
+          <h1 className="text-xl font-serif font-bold text-slate-900 italic tracking-tight">
+            mepa <span className="text-purple-500 text-[10px] block not-italic font-sans font-bold uppercase tracking-[0.2em] mt-0.5">high maintenance</span>
+          </h1>
+        </div>
 
         <div className="relative">
           <button
