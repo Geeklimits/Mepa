@@ -7,9 +7,18 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 // --- CONFIGURATION ---
+// --- CONFIGURATION ---
 const PORT = process.env.PORT || 3001;
 // Note: In this architecture, this script runs on a VPS (Render/Railway).
 // It connects to Supabase to write logs.
+
+// --- RENDER KEEP-ALIVE ---
+// Render Web Services require a port to be bound to pass health checks.
+import http from 'http';
+http.createServer((req, res) => {
+    res.write("Mepa is Online 💅");
+    res.end();
+}).listen(PORT, () => console.log(`🌐 Keep-Alive Server listening on port ${PORT}`));
 
 if (!process.env.DISCORD_TOKEN) {
     console.error("❌ Error: DISCORD_TOKEN is missing.");
