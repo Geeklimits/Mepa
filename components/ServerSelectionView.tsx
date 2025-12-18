@@ -85,7 +85,7 @@ const ServerSelectionView: React.FC<ServerSelectionViewProps> = ({ servers, onSe
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                window.open(`https://discord.com/api/oauth2/authorize?client_id=1319041280387420180&permissions=8&scope=bot%20applications.commands`, '_blank');
+                                                window.open(`https://discord.com/api/oauth2/authorize?client_id=1451038378093969559&permissions=8&scope=bot%20applications.commands`, '_blank');
                                             }}
                                             className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all border border-white/10 active:scale-95"
                                         >

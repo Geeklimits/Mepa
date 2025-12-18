@@ -17,10 +17,19 @@ import { supabase } from './src/lib/supabase';
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<BotTab>(BotTab.DASHBOARD);
   const [session, setSession] = useState<any>(null);
-  const [profile, setProfile] = useState<DiscordProfile | null>(null);
-  const [servers, setServers] = useState<DiscordServer[]>([]);
-  const [selectedServer, setSelectedServer] = useState<DiscordServer | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<DiscordProfile | null>(() => {
+    const saved = localStorage.getItem('mepa_profile');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [servers, setServers] = useState<DiscordServer[]>(() => {
+    const saved = localStorage.getItem('mepa_servers');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedServer, setSelectedServer] = useState<DiscordServer | null>(() => {
+    const saved = localStorage.getItem('mepa_selected_server');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isLoading, setIsLoading] = useState(!profile);
   const [error, setError] = useState<string | null>(null);
 
   const [logs, setLogs] = useState<LogEntry[]>(() => {
@@ -36,6 +45,12 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    localStorage.setItem('mepa_profile', JSON.stringify(profile));
+    localStorage.setItem('mepa_servers', JSON.stringify(servers));
+    localStorage.setItem('mepa_selected_server', JSON.stringify(selectedServer));
+  }, [profile, servers, selectedServer]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const init = async () => {
@@ -43,7 +58,7 @@ const App: React.FC = () => {
       if (!isMounted) return;
 
       setSession(session);
-      if (session) {
+      if (session && !profile) {
         await fetchDiscordData(session);
       } else {
         setIsLoading(false);
@@ -55,7 +70,6 @@ const App: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
 
-      // Only fetch if session actually changed to a logged-in state
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(session);
         if (session) fetchDiscordData(session);
@@ -64,6 +78,9 @@ const App: React.FC = () => {
         setProfile(null);
         setServers([]);
         setSelectedServer(null);
+        localStorage.removeItem('mepa_profile');
+        localStorage.removeItem('mepa_servers');
+        localStorage.removeItem('mepa_selected_server');
         setIsLoading(false);
       }
     });
@@ -76,53 +93,43 @@ const App: React.FC = () => {
 
   const fetchDiscordData = async (session: any) => {
     if (!session?.provider_token) {
-      console.warn("No provider token found in session.");
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
-      // Fetch Profile
-      setProfile({
+      const userData = {
         id: session.user.id,
         username: session.user.user_metadata.full_name || session.user.user_metadata.name,
         avatar: session.user.user_metadata.avatar_url,
         email: session.user.email
-      });
+      };
+      setProfile(userData);
 
-      // Fetch Guilds
       const response = await fetch('https://discord.com/api/users/@me/guilds', {
         headers: { Authorization: `Bearer ${session.provider_token}` }
       });
 
       if (response.status === 429) {
-        const err = "Rate limited by Discord. Mepa is annoyed. 🙄 Try again in a minute.";
-        setError(err);
-        console.error(err);
+        setError("Rate limited by Discord. Mepa is annoyed. 🙄");
         return;
       }
 
-      setError(null);
       const guilds = await response.json();
-
-      // Safety check: Discord might return an error object instead of an array
       if (!Array.isArray(guilds)) {
-        console.error("Guilds response is not an array:", guilds);
         setServers([]);
         return;
       }
 
-      // Filter for Admin permissions (0x8)
-      const adminServers = guilds.filter((g: any) => (parseInt(g.permissions) & 0x8) === 0x8);
+      const adminServers = guilds
+        .filter((g: any) => (parseInt(g.permissions) & 0x8) === 0x8)
+        .map((s: any) => ({
+          ...s,
+          hasBot: s.id === '1451038378093969559'
+        }));
 
-      // Simulate bot presence for now
-      const mappedServers = adminServers.map((s: any) => ({
-        ...s,
-        hasBot: s.id === '1319041280387420180' // Placeholder ID
-      }));
-
-      setServers(mappedServers);
+      setServers(adminServers);
     } catch (e) {
       console.error("Discord Fetch Error:", e);
     } finally {
