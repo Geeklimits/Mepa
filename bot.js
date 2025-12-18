@@ -212,8 +212,11 @@ client.on('guildMemberAdd', async (member) => {
         .setTimestamp();
 
     // 3. Send Message
+    // Supports basic variables: {user}, {server}
+    const welcomeMsg = `Hey ${member}, welcome to ${member.guild.name}. 🍸`;
+
     channel.send({
-        content: `Hey ${member}, welcome to the club. 🍸`,
+        content: welcomeMsg,
         embeds: [embed]
     }).catch(err => console.error("Could not send welcome message:", err));
 
