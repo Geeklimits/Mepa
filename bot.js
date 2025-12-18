@@ -1,5 +1,6 @@
 import { Client, GatewayIntentBits, Partials, EmbedBuilder, PermissionsBitField } from 'discord.js';
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
 import { DisTube } from 'distube';
 import { YouTubePlugin } from '@distube/youtube';
@@ -48,9 +49,9 @@ const client = new Client({
     partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
-// Initialize Gemini
-const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-const ai = new GoogleGenAI({ apiKey });
+// Initialize AI
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.API_KEY || '');
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Initialize DisTube
 const distube = new DisTube(client, {
@@ -183,23 +184,22 @@ client.on('messageCreate', async (message) => {
                 ]);
                 responseText = result.response.text();
             } else {
-                const history = conversationHistory.get(message.channel.id) || [];
-                const chat = model.startChat({
-                    history: history,
-                    generationConfig: {
-                        temperature: 1.0,
-                        maxOutputTokens: 500,
-                    },
-                });
-
+                // Use Groq for Text Sass (Faster, Unfiltered)
                 let prompt = message.content;
                 if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
                 if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
                     prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
                 }
 
-                const result = await chat.sendMessage(prompt);
-                responseText = result.response.text();
+                const completion = await groq.chat.completions.create({
+                    messages: [
+                        { role: "system", content: SYSTEM_INSTRUCTION },
+                        { role: "user", content: prompt }
+                    ],
+                    model: "llama3-70b-8192",
+                    temperature: 1.0,
+                });
+                responseText = completion.choices[0]?.message?.content || "I'm protecting my peace right now. 🥀";
             }
 
             // Update history
@@ -208,7 +208,7 @@ client.on('messageCreate', async (message) => {
 
             return message.reply(responseText);
         } catch (error) {
-            console.error("Gemini Error Details:", error);
+            console.error("AI Error Details:", error);
             const errorMsg = error instanceof Error ? error.message : String(error);
             message.reply(`The universe is blocking this connection: ${errorMsg}. Probably because your frequency is too low. 🔮`);
         }
