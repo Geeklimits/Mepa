@@ -50,7 +50,7 @@ const WelcomeView: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-12">
-            <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
+            <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm">
                 <h3 className="text-2xl font-bold text-slate-900 mb-6">Welcome Settings 🎀</h3>
 
                 {/* Grid Layout */}
@@ -114,7 +114,7 @@ const WelcomeView: React.FC = () => {
                                         <button
                                             key={g.label}
                                             onClick={() => setGradientPreset(g.value)}
-                                            className={`h-12 rounded-xl bg-gradient-to-r ${g.value} border-2 transition-all hover:scale-105 ${gradientPreset === g.value ? 'border-slate-900 ring-2 ring-slate-900 ring-offset-2' : 'border-transparent'}`}
+                                            className={`h-12 rounded-xl bg-linear-to-r ${g.value} border-2 transition-all hover:scale-105 ${gradientPreset === g.value ? 'border-slate-900 ring-2 ring-slate-900 ring-offset-2' : 'border-transparent'}`}
                                             title={g.label}
                                         />
                                     ))}
@@ -201,7 +201,7 @@ const WelcomeView: React.FC = () => {
                             </div>
 
                             {/* THE CARD PREVIEW */}
-                            <div className="relative w-full aspect-[2/1] bg-slate-800 rounded-2xl overflow-hidden shadow-2xl border-2 border-slate-700/50 group">
+                            <div className="relative w-full aspect-2/1 bg-slate-800 rounded-2xl overflow-hidden shadow-2xl border-2 border-slate-700/50 group">
                                 <img
                                     src={bgUrl || 'https://via.placeholder.com/600x300'}
                                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -219,7 +219,7 @@ const WelcomeView: React.FC = () => {
 
                                     <div className="mt-2 text-center w-full">
                                         <h2
-                                            className={`text-4xl font-black uppercase tracking-wider drop-shadow-xl font-serif mb-1 ${isGradient ? `text-transparent bg-clip-text bg-gradient-to-r ${gradientPreset}` : ''}`}
+                                            className={`text-4xl font-black uppercase tracking-wider drop-shadow-xl font-serif mb-1 ${isGradient ? `text-transparent bg-clip-text bg-linear-to-r ${gradientPreset}` : ''}`}
                                             style={!isGradient ? { color: titleColor } : {}}
                                         >
                                             {titleText || 'WELCOME'}

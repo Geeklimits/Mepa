@@ -56,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           {isSwitcherOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl border border-slate-100 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-[100]">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl border border-slate-100 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-100">
               <div className="max-h-60 overflow-y-auto p-2 space-y-1">
                 {servers.map(server => (
                   <button

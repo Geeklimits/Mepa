@@ -48,7 +48,7 @@ const ServerSelectionView: React.FC<ServerSelectionViewProps> = ({ servers, onSe
                             className="bg-[#1F2937] rounded-3xl overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer border border-transparent hover:border-white/10"
                             onClick={() => onSelect(server)}
                         >
-                            <div className="h-24 bg-gradient-to-tr from-indigo-500 to-purple-600 opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                            <div className="h-24 bg-linear-to-tr from-indigo-500 to-purple-600 opacity-20 group-hover:opacity-30 transition-opacity"></div>
                             <div className="p-8 pt-0 -mt-12 flex flex-col items-center text-center space-y-4">
                                 <div className="w-24 h-24 rounded-full bg-[#111827] flex items-center justify-center text-4xl shadow-2xl border-4 border-[#1F2937] overflow-hidden">
                                     {server.icon ? (

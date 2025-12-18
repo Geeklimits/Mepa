@@ -116,7 +116,7 @@ const MusicView: React.FC<MusicViewProps> = ({ onLog }) => {
           <button
             type="submit"
             disabled={isSearching || !query.trim()}
-            className="absolute right-4 top-1/2 -translate-y-1/2 px-10 py-3.5 bg-slate-900 text-white rounded-[2rem] font-bold hover:bg-black transition-all shadow-xl active:scale-95 disabled:opacity-50 flex items-center space-x-2"
+            className="absolute right-4 top-1/2 -translate-y-1/2 px-10 py-3.5 bg-slate-900 text-white rounded-4xl font-bold hover:bg-black transition-all shadow-xl active:scale-95 disabled:opacity-50 flex items-center space-x-2"
           >
             {isSearching ? (
               <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
@@ -136,7 +136,7 @@ const MusicView: React.FC<MusicViewProps> = ({ onLog }) => {
               {searchResults.map((song, i) => (
                 <div
                   key={i}
-                  className="flex flex-col p-6 rounded-[2rem] bg-slate-50 border border-slate-100 hover:border-pink-200 hover:bg-white transition-all group"
+                  className="flex flex-col p-6 rounded-4xl bg-slate-50 border border-slate-100 hover:border-pink-200 hover:bg-white transition-all group"
                 >
                   <div className="flex items-center space-x-4 mb-4">
                     <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-xl shadow-sm border border-slate-100 overflow-hidden shrink-0 group-hover:scale-110 transition-transform">
@@ -245,7 +245,7 @@ const MusicView: React.FC<MusicViewProps> = ({ onLog }) => {
                   </div>
                   <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-pink-500 to-purple-500 h-full transition-all duration-300"
+                      className="bg-linear-to-r from-pink-500 to-purple-500 h-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     ></div>
                   </div>
