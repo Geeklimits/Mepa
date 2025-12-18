@@ -23,7 +23,8 @@ General Rules:
 
 export const getChloeResponse = async (userInput: string) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY || '';
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: userInput,
@@ -42,7 +43,12 @@ export const getChloeResponse = async (userInput: string) => {
 
 export const searchMusic = async (query: string) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY || '';
+    if (!apiKey) {
+      console.error("Gemini API Key missing in frontend env");
+      return [];
+    }
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Find 5 dark, moody, or empowering songs related to the search: "${query}". Return them as a JSON list.`,
