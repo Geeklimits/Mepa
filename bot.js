@@ -41,7 +41,8 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessageReactions
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildVoiceStates
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
@@ -54,9 +55,7 @@ const ai = new GoogleGenAI({ apiKey });
 const distube = new DisTube(client, {
     plugins: [
         new YouTubePlugin(),
-        new SpotifyPlugin({
-            emitEventsAfterFetching: true
-        })
+        new SpotifyPlugin()
     ],
     emitNewSongOnly: true,
     emitAddSongWhenCreatingQueue: false,
@@ -124,6 +123,7 @@ async function logAction(action, subject, context) {
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
+    console.log(`[MSG] ${message.author.username}: ${message.content}`);
 
     const content = message.content.toLowerCase();
     const triggers = ['love', 'breakup', 'boyfriend', 'fashion', 'money', 'hustle', 'men', 'dating'];
