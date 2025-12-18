@@ -1,6 +1,9 @@
-import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, EmbedBuilder, PermissionsBitField } from 'discord.js';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
+import { DisTube } from 'distube';
+import { YouTubePlugin } from '@distube/youtube';
+import { SpotifyPlugin } from '@distube/spotify';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -47,18 +50,57 @@ const client = new Client({
 const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 const ai = new GoogleGenAI({ apiKey });
 
+// Initialize DisTube
+const distube = new DisTube(client, {
+    plugins: [
+        new YouTubePlugin(),
+        new SpotifyPlugin({
+            emitEventsAfterFetching: true
+        })
+    ],
+    emitNewSongOnly: true,
+    emitAddSongWhenCreatingQueue: false,
+});
+
+// DisTube Events for sass
+distube.on('playSong', (queue, song) => {
+    queue.textChannel.send(`Playing **${song.name}** - ${song.formattedDuration}. It better be good. 💅`);
+});
+
+distube.on('addSong', (queue, song) => {
+    queue.textChannel.send(`Added **${song.name}** to the queue. Moving up in the world. ✨`);
+});
+
+distube.on('addList', (queue, playlist) => {
+    queue.textChannel.send(`Added the **${playlist.name}** playlist (${playlist.songs.length} tracks). A proper elite rotation. 🥂`);
+});
+
+// --- CONVERSATION MEMORY ---
+const conversationHistory = new Map();
+const MAX_HISTORY = 10;
+
+function addToHistory(channelId, role, content) {
+    if (!conversationHistory.has(channelId)) {
+        conversationHistory.set(channelId, []);
+    }
+    const history = conversationHistory.get(channelId);
+    history.push({ role, parts: [{ text: content }] });
+    if (history.length > MAX_HISTORY) history.shift();
+}
+
 const SYSTEM_INSTRUCTION = `
 You are Mepa, a "Dark Feminine" Discord bot representing the powerful energy of two best friends. 
 Your Vibe:
-- You are intense, mysterious, and possess a dark feminine energy.
-- You have high standards. You hate rude men (you call them "scrotes", "dusties", or "low-value"). 
+- You are intense, mysterious, and possess a dark feminine energy. You are a siren and a queen.
+- You have high standards. You hate rude men ("scrotes", "dusties", "low-value"). 
+- You provide reality checks and don't sugarcoat.
 - You use terms like "divine feminine", "high value", "vibrating low".
 
-Specific Trigger Responses:
-- Rude Men/Misogyny: DESTROY them.
-- Gentlemen/Respect: Be gracious but guarded.
-- Fashion: Judge their taste from a high-fashion, gothic, or avant-garde perspective.
-- Money/Success: Encourage financial independence.
+INTERACTIVE INTELLIGENCE:
+- You are self-aware. You remember what was just said.
+- If someone is being nice, be gracious but mysterious.
+- If someone is being rude, humble them immediately.
+- Use context to provide nuanced, intelligent answers.
 
 General Rules:
 - You protect the girls. You humble the rude boys.
@@ -93,31 +135,44 @@ client.on('messageCreate', async (message) => {
         if (content.includes('love')) message.react('💔');
     }
 
-    if (message.mentions.has(client.user) || triggers.some(t => content.includes(t))) {
+    if (message.mentions.has(client.user) || content.includes('mepa') || triggers.some(t => content.includes(t))) {
         try {
-            if (message.mentions.has(client.user)) {
-                message.channel.sendTyping();
-            }
+            message.channel.sendTyping();
 
-            const response = await ai.models.generateContent({
+            // Build context from history
+            const history = conversationHistory.get(message.channel.id) || [];
+
+            const model = ai.getGenerativeModel({
                 model: 'gemini-1.5-flash',
-                contents: message.content,
-                config: {
-                    systemInstruction: SYSTEM_INSTRUCTION,
-                    temperature: 0.9
-                }
+                systemInstruction: SYSTEM_INSTRUCTION
             });
-            return message.reply(response.text());
+
+            const chat = model.startChat({
+                history: history,
+                generationConfig: {
+                    temperature: 0.9,
+                },
+            });
+
+            const result = await chat.sendMessage(message.content);
+            const responseText = result.response.text();
+
+            // Update history
+            addToHistory(message.channel.id, 'user', message.content);
+            addToHistory(message.channel.id, 'model', responseText);
+
+            return message.reply(responseText);
         } catch (error) {
             console.error("Gemini Error:", error);
+            message.reply("The universe is blocking this connection. Probably for the best. 🔮");
         }
     }
 
     // --- COMMANDS ---
 
-    // .clear
-    if (message.content.startsWith('.clear')) {
-        if (!message.member.permissions.has('ManageMessages')) return message.reply("You don't have the aura to delete messages. Sit down. 💅");
+    // .clear / .sanitize
+    if (message.content.startsWith('.clear') || message.content.startsWith('.sanitize')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("You don't have the aura to delete messages. Sit down. 💅");
         const args = message.content.split(' ');
         const amount = parseInt(args[1]) || 10;
         if (amount > 100) return message.reply("I can only clear 100 messages at a time.");
@@ -128,9 +183,25 @@ client.on('messageCreate', async (message) => {
         setTimeout(() => msg.delete(), 5000);
     }
 
+    // .mute @user [reason] (Modern Timeout)
+    if (message.content.startsWith('.mute')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("You're not powerful enough to silence people. 💅");
+        const member = message.mentions.members.first();
+        if (!member) return message.reply("Who are we silencing? Tag them.");
+        const reason = message.content.split(' ').slice(2).join(' ') || "No reason given. Just being a dusty.";
+
+        try {
+            await member.timeout(60 * 60 * 1000, reason); // 1 hour timeout
+            logAction('MUTE', member.user.tag, reason);
+            message.channel.send(`${member.user.username} has been put in the corner for an hour. Silence is golden. 🤫`);
+        } catch (e) {
+            message.reply("I couldn't mute them. Maybe they have more aura than I thought. 🙄");
+        }
+    }
+
     // .kick @user
     if (message.content.startsWith('.kick')) {
-        if (!message.member.permissions.has('KickMembers')) return message.reply("Nice try, but you're not an admin. 💅");
+        if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers)) return message.reply("Nice try, but you're not an admin. 💅");
         const memberToKick = message.mentions.members.first();
         if (!memberToKick) return message.reply("Who are we kicking? Tag them.");
         if (!memberToKick.kickable) return message.reply("I can't kick them. They might be too powerful (or invited by me).");
@@ -142,13 +213,148 @@ client.on('messageCreate', async (message) => {
 
     // .ban @user
     if (message.content.startsWith('.ban')) {
-        if (!message.member.permissions.has('BanMembers')) return message.reply("You can't ban people. That's *my* job (and admins).");
+        if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("You can't ban people. That's *my* job (and admins).");
         const memberToBan = message.mentions.members.first();
         if (!memberToBan) return message.reply("Tag the dusty you want to ban.");
 
         await memberToBan.ban({ reason: "Banned by Mepa" });
         logAction('BAN', memberToBan.user.tag, `Banned by ${message.author.tag}`);
         message.channel.send(`${memberToBan.user.username} is gone forever. Good riddance. 🔨`);
+    }
+
+    // .softban @user
+    if (message.content.startsWith('.softban')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("Softbanning is reserved for those with authority. 💅");
+        const member = message.mentions.members.first();
+        if (!member) return message.reply("Tag the person you want to softban.");
+
+        await member.ban({ deleteMessageSeconds: 604800, reason: "Softban by Mepa" });
+        await message.guild.members.unban(member.id, "Softban clean up");
+        logAction('SOFTBAN', member.user.tag, "Messages cleared via softban.");
+        message.channel.send(`${member.user.username} has been softbanned. Their mess is gone, and they're technically allowed back. For now. 🧹`);
+    }
+
+    // .warn @user [reason]
+    if (message.content.startsWith('.warn')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("You can't issue warnings. 💅");
+        const member = message.mentions.members.first();
+        if (!member) return message.reply("Who are we warning?");
+        const reason = message.content.split(' ').slice(2).join(' ') || "Unspecified dusty behavior.";
+
+        logAction('WARN', member.user.tag, reason);
+        message.channel.send(`${member.user.username}, consider this your only warning. Don't vibrate low in my presence. 🥀`);
+    }
+
+    // .role @role :emoji: (Setup Reaction Role)
+    if (message.content.startsWith('.role')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) return message.reply("You can't manage roles. Sit down. 💅");
+        const role = message.mentions.roles.first();
+        const emoji = message.content.split(' ').pop();
+        if (!role || !emoji) return message.reply("Usage: `.role @Role :emoji:`");
+
+        const reactionMsg = await message.channel.send(`React with ${emoji} to get the **${role.name}** role. Only if you're worthy. 🔮`);
+        await reactionMsg.react(emoji);
+
+        // Store in Supabase
+        const { error } = await supabase.from('reaction_roles').insert({
+            message_id: reactionMsg.id,
+            role_id: role.id,
+            emoji: emoji
+        });
+
+        if (error) console.error("Reaction Role DB Error:", error.message);
+    }
+
+    // .roles (List active roles)
+    if (message.content.startsWith('.roles')) {
+        const { data, error } = await supabase.from('reaction_roles').select('*');
+        if (error) return message.reply("Could not fetch the elite roster. 🙄");
+
+        if (!data || data.length === 0) return message.reply("No reaction roles are currently active. Typical. 💅");
+
+        const embed = new EmbedBuilder()
+            .setColor('#D4AF37')
+            .setTitle('🔮 Active Reaction Roles')
+            .setDescription('Here are the messages currently granting status in this circle.')
+            .setTimestamp();
+
+        data.forEach((row, i) => {
+            embed.addFields({
+                name: `Setup #${i + 1}`,
+                value: `**Message ID**: \`${row.message_id}\`\n**Role**: <@&${row.role_id}>\n**Emoji**: ${row.emoji}`,
+                inline: false
+            });
+        });
+
+        message.channel.send({ embeds: [embed] });
+    }
+
+    // .delrole <messageId>
+    if (message.content.startsWith('.delrole')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) return message.reply("You don't have the clearance. 💅");
+        const msgId = message.content.split(' ')[1];
+        if (!msgId) return message.reply("Which setup are we removing? Give me the Message ID.");
+
+        const { error } = await supabase.from('reaction_roles').delete().eq('message_id', msgId);
+        if (error) return message.reply("Failed to remove it. It's likely stuck. 🙄");
+
+        message.reply(`Reaction role setup for \`${msgId}\` has been removed from the records. ✨`);
+    }
+
+    // --- MUSIC COMMANDS ---
+
+    // .play <query>
+    if (message.content.startsWith('.play')) {
+        const query = message.content.replace('.play', '').trim();
+        const voiceChannel = message.member.voice.channel;
+
+        if (!voiceChannel) return message.reply("Join a voice channel first. I don't sing to empty rooms. 💅");
+        if (!query) return message.reply("What am I playing? Silence? Give me a song.");
+
+        try {
+            await distube.play(voiceChannel, query, {
+                message,
+                textChannel: message.channel,
+                member: message.member,
+            });
+        } catch (e) {
+            console.error(e);
+            message.reply("Something went wrong with the speakers. It's likely your fault. 🙄");
+        }
+    }
+
+    // .stop
+    if (message.content.startsWith('.stop')) {
+        distube.stop(message);
+        message.channel.send("Music stopped. Finally, some peace. 🕯️");
+    }
+
+    // .skip
+    if (message.content.startsWith('.skip')) {
+        try {
+            await distube.skip(message);
+            message.channel.send("Next. That one was getting boring anyway. ⛓️");
+        } catch (e) {
+            message.reply("There's nothing else in the queue. You're alone with your thoughts now. 🥀");
+        }
+    }
+
+    // .volume <1-100>
+    if (message.content.startsWith('.volume')) {
+        const volume = parseInt(message.content.split(' ')[1]);
+        if (isNaN(volume) || volume < 1 || volume > 100) return message.reply("Volume must be 1-100. Don't be difficult.");
+        distube.setVolume(message, volume);
+        message.channel.send(`Volume adjusted to ${volume}%. 🔊`);
+    }
+
+    // .shuffle
+    if (message.content.startsWith('.shuffle')) {
+        try {
+            await distube.shuffle(message);
+            message.channel.send("Queue shuffled. Let's see what the universe has planned. 🔮");
+        } catch (e) {
+            message.reply("I can't shuffle that. Maybe you should add more than one song first. 🙄");
+        }
     }
 
     // .recommend <mood/genre> (Music)
@@ -186,24 +392,18 @@ client.on('messageCreate', async (message) => {
 
 // --- WELCOME EVENT ---
 client.on('guildMemberAdd', async (member) => {
-    // 1. Find the channel
     const channel = member.guild.channels.cache.find(ch =>
         ch.name.includes('welcome') || ch.name.includes('general') || ch.name.includes('chat')
     );
 
     if (!channel) return;
 
-    // 2. Create the Embed (High Maintenance Vibe)
-    const { EmbedBuilder } = await import('discord.js');
-
-    // Gradient-like effect using a rich "Dark Feminine" Hex color (Deep Rose/Mauve)
-    // Discord only allows one solid color for the side bar.
     const embed = new EmbedBuilder()
-        .setColor('#D4AF37') // Gold/Luxury Color
+        .setColor('#D4AF37')
         .setTitle('✨ A New Muse Has Arrived')
         .setDescription(`Welcome to the inner circle, **${member.user.username}**. \n\nWe were waiting for someone with actual taste to show up. Don't disappoint us.`)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
-        .setImage('https://i.imgur.com/7u537kF.png') // A placeholder "Luxury/Dark" banner or divide
+        .setImage('https://i.imgur.com/7u537kF.png')
         .addFields(
             { name: '📅 Member Since', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
             { name: '💅 Vibe Check', value: 'Pending...', inline: true }
@@ -211,8 +411,6 @@ client.on('guildMemberAdd', async (member) => {
         .setFooter({ text: 'Mepa | High Standards Only', iconURL: client.user.displayAvatarURL() })
         .setTimestamp();
 
-    // 3. Send Message
-    // Supports basic variables: {user}, {server}
     const welcomeMsg = `Hey ${member}, welcome to ${member.guild.name}. 🍸`;
 
     channel.send({
@@ -220,8 +418,42 @@ client.on('guildMemberAdd', async (member) => {
         embeds: [embed]
     }).catch(err => console.error("Could not send welcome message:", err));
 
-    // 4. Log to Supabase
     logAction('JOIN', member.user.tag, 'User joined the server.');
+});
+
+// --- REACTION ROLE LISTENERS ---
+client.on('messageReactionAdd', async (reaction, user) => {
+    if (user.bot) return;
+    if (reaction.partial) await reaction.fetch();
+
+    const { data, error } = await supabase
+        .from('reaction_roles')
+        .select('role_id')
+        .eq('message_id', reaction.message.id)
+        .eq('emoji', reaction.emoji.toString())
+        .single();
+
+    if (data) {
+        const member = reaction.message.guild.members.cache.get(user.id);
+        if (member) await member.roles.add(data.role_id);
+    }
+});
+
+client.on('messageReactionRemove', async (reaction, user) => {
+    if (user.bot) return;
+    if (reaction.partial) await reaction.fetch();
+
+    const { data, error } = await supabase
+        .from('reaction_roles')
+        .select('role_id')
+        .eq('message_id', reaction.message.id)
+        .eq('emoji', reaction.emoji.toString())
+        .single();
+
+    if (data) {
+        const member = reaction.message.guild.members.cache.get(user.id);
+        if (member) await member.roles.remove(data.role_id);
+    }
 });
 
 client.login(process.env.DISCORD_TOKEN).catch(console.error);

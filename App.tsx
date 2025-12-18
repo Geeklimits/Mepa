@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { BotTab, LogEntry, LogType } from './types';
+import { BotTab, LogEntry, LogType, DiscordServer, DiscordProfile } from './types';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardView from './components/DashboardView';
@@ -10,9 +10,18 @@ import RolesView from './components/RolesView';
 import PersonalityView from './components/PersonalityView';
 import IntegrationView from './components/IntegrationView';
 import WelcomeView from './components/WelcomeView';
+import DiscordLoginView from './components/DiscordLoginView';
+import ServerSelectionView from './components/ServerSelectionView';
+import { supabase } from './src/lib/supabase';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<BotTab>(BotTab.DASHBOARD);
+  const [session, setSession] = useState<any>(null);
+  const [profile, setProfile] = useState<DiscordProfile | null>(null);
+  const [servers, setServers] = useState<DiscordServer[]>([]);
+  const [selectedServer, setSelectedServer] = useState<DiscordServer | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [logs, setLogs] = useState<LogEntry[]>(() => {
     const saved = localStorage.getItem('mepa_logs');
     if (saved) {
@@ -26,6 +35,61 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) fetchDiscordData(session);
+      else setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) fetchDiscordData(session);
+      else {
+        setProfile(null);
+        setServers([]);
+        setSelectedServer(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchDiscordData = async (session: any) => {
+    setIsLoading(true);
+    try {
+      // Fetch Profile
+      setProfile({
+        id: session.user.id,
+        username: session.user.user_metadata.full_name || session.user.user_metadata.name,
+        avatar: session.user.user_metadata.avatar_url,
+        email: session.user.email
+      });
+
+      // Fetch Guilds
+      const response = await fetch('https://discord.com/api/users/@me/guilds', {
+        headers: { Authorization: `Bearer ${session.provider_token}` }
+      });
+      const guilds = await response.json();
+
+      // Filter for Admin permissions (0x8)
+      const adminServers = guilds.filter((g: any) => (parseInt(g.permissions) & 0x8) === 0x8);
+
+      // Simulate bot presence for now - in real app would check DB
+      const mappedServers = adminServers.map((s: any) => ({
+        ...s,
+        hasBot: s.id === '1319041280387420180' // Placeholder ID
+      }));
+
+      setServers(mappedServers);
+    } catch (e) {
+      console.error("Discord Fetch Error:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     localStorage.setItem('mepa_logs', JSON.stringify(logs));
   }, [logs]);
 
@@ -34,7 +98,7 @@ const App: React.FC = () => {
       id: Date.now().toString(),
       type,
       action,
-      user: 'Admin', // In a real app, this would be the logged-in user
+      user: profile?.username || 'Admin',
       target,
       timestamp: new Date(),
       reason
@@ -43,24 +107,41 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    if (isLoading) return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-pink-500 rounded-full animate-spin"></div>
+      </div>
+    );
+
+    if (!session) return <DiscordLoginView />;
+    if (!selectedServer) return <ServerSelectionView servers={servers} onSelect={setSelectedServer} />;
+
     switch (activeTab) {
-      case BotTab.DASHBOARD: return <DashboardView logs={logs} />;
+      case BotTab.DASHBOARD: return <DashboardView logs={logs} selectedServer={selectedServer} />;
       case BotTab.MODERATION: return <ModerationView onLog={addLog} />;
       case BotTab.WELCOME: return <WelcomeView />;
       case BotTab.MUSIC: return <MusicView onLog={addLog} />;
       case BotTab.ROLES: return <RolesView onLog={addLog} />;
       case BotTab.PERSONALITY: return <PersonalityView />;
       case BotTab.INTEGRATION: return <IntegrationView />;
-      default: return <DashboardView logs={logs} />;
+      default: return <DashboardView logs={logs} selectedServer={selectedServer} />;
     }
   };
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 overflow-hidden">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {session && selectedServer && (
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          servers={servers}
+          selectedServer={selectedServer}
+          onSelectServer={setSelectedServer}
+        />
+      )}
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <Header activeTab={activeTab} />
+        {session && selectedServer && <Header activeTab={activeTab} profile={profile} onLogout={() => supabase.auth.signOut()} />}
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">

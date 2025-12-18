@@ -1,40 +1,40 @@
+
 import React, { useEffect, useState } from 'react';
-import { LogEntry } from '../types';
+import { LogEntry, DiscordServer } from '../types';
 import { supabase } from '../src/lib/supabase';
 
 interface DashboardViewProps {
-  logs: LogEntry[]; // Keep prop for fallback/compatibility
+  logs: LogEntry[];
+  selectedServer: DiscordServer;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ logs: initialLogs }) => {
-  const [logs, setLogs] = useState<any[]>([]); // Use any[] for demo simplicity as DB shape differs slightly
+const DashboardView: React.FC<DashboardViewProps> = ({ logs: initialLogs, selectedServer }) => {
+  const [logs, setLogs] = useState<any[]>([]);
 
-  // Stats - Static for Demo, but could be dynamic
   const stats = [
-    { label: 'Total Members', value: '12,482', change: '+240 this week', icon: '👥' },
+    { label: 'Total Members', value: selectedServer.approximate_member_count?.toLocaleString() || '12,482', change: '+240 this week', icon: '👥' },
     { label: 'Active Today', value: '4,102', change: '🔥 High energy', icon: '✨' },
     { label: 'Banned (Lows)', value: logs.filter(l => l.action === 'BANNED').length.toString(), change: 'Cleaned up the trash', icon: '🗑️' },
     { label: 'Uptime', value: '99.9%', change: 'Better than your last bf', icon: '💅' },
   ];
 
   useEffect(() => {
-    // 1. Initial Fetch
     const fetchLogs = async () => {
       const { data, error } = await supabase
         .from('logs')
         .select('*')
+        .eq('guild_id', selectedServer.id)
         .order('created_at', { ascending: false })
         .limit(20);
       if (data) setLogs(data);
     };
     fetchLogs();
 
-    // 2. Realtime Subscription
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel(`logs-${selectedServer.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'logs' },
+        { event: 'INSERT', schema: 'public', table: 'logs', filter: `guild_id=eq.${selectedServer.id}` },
         (payload) => {
           setLogs((prev) => [payload.new, ...prev]);
         }
@@ -44,40 +44,41 @@ const DashboardView: React.FC<DashboardViewProps> = ({ logs: initialLogs }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
-
-  const getLogBadge = (action: string) => {
-    switch (action) {
-      case 'BANNED': return 'bg-red-50 text-red-500 border-red-100';
-      case 'MUTED': return 'bg-amber-50 text-amber-500 border-amber-100';
-      case 'CLEARED': return 'bg-blue-50 text-blue-500 border-blue-100';
-      default: return 'bg-slate-50 text-slate-500 border-slate-100';
-    }
-  };
+  }, [selectedServer.id]);
 
   return (
     <div className="space-y-8">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-2xl">{stat.icon}</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.change}</span>
-            </div>
-            <h3 className="text-slate-500 text-sm font-medium">{stat.label}</h3>
-            <p className="text-3xl font-bold text-slate-800 mt-1">{stat.value}</p>
+      {/* Welcome & Add to Server Section */}
+      <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center space-x-6">
+          <div className="w-20 h-20 rounded-full bg-slate-100 overflow-hidden shadow-inner border-4 border-white">
+            {selectedServer.icon ? (
+              <img src={`https://cdn.discordapp.com/icons/${selectedServer.id}/${selectedServer.icon}.png`} alt={selectedServer.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-slate-400">{selectedServer.name[0]}</div>
+            )}
           </div>
-        ))}
+          <div>
+            <h2 className="text-3xl font-serif font-bold text-slate-900 italic">Welcome to {selectedServer.name}</h2>
+            <p className="text-slate-500 font-medium tracking-tight">Managing the vibes since {new Date().getFullYear()}. 🥀</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => window.open(`https://discord.com/api/oauth2/authorize?client_id=1319041280387420180&permissions=8&scope=bot%20applications.commands&guild_id=${selectedServer.id}`, '_blank')}
+          className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold flex items-center space-x-3 transition-all shadow-xl shadow-indigo-100 active:scale-95"
+        >
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.086 2.157 2.419c0 1.334-.947 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.086 2.157 2.419c0 1.334-.946 2.419-2.157 2.419z" /></svg>
+          <span>Add Mepa to Server</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Logs Table */}
         <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm flex flex-col">
           <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-white sticky top-0 z-10">
             <div>
               <h3 className="font-bold text-slate-800">Server Activity & Drama</h3>
-              <p className="text-xs text-slate-400">Mepa tracks everything you do. 🔮</p>
+              <p className="text-xs text-slate-400">Mepa tracks everything you do in {selectedServer.name}. 🔮</p>
             </div>
             <span className="text-xs font-bold text-pink-500 bg-pink-50 px-3 py-1 rounded-full">{logs.length} events logged</span>
           </div>
@@ -94,13 +95,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ logs: initialLogs }) => {
               <tbody className="divide-y divide-slate-50">
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">No drama yet from Supabase. Connect the bot! 🙄</td>
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">No drama yet in this server. 🙄</td>
                   </tr>
                 ) : (
                   logs.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border ${getLogBadge(log.action)}`}>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border ${log.action === 'BANNED' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
                           {log.action}
                         </span>
                       </td>
@@ -110,15 +111,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ logs: initialLogs }) => {
                           <span className="text-[10px] text-slate-400">By System</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <p className="text-slate-500 text-xs italic truncate max-w-[200px]" title={log.context}>
-                          {log.context || "No context"}
-                        </p>
+                      <td className="px-6 py-4 text-slate-500 text-xs italic truncate max-w-[200px]">
+                        {log.context || "No context"}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-slate-400 text-[10px] font-medium whitespace-nowrap">
-                          {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                      <td className="px-6 py-4 text-slate-400 text-[10px] font-medium whitespace-nowrap">
+                        {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </td>
                     </tr>
                   ))
@@ -128,28 +125,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({ logs: initialLogs }) => {
           </div>
         </div>
 
-        {/* Action Card */}
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-[2.5rem] text-white relative overflow-hidden flex flex-col justify-end shadow-xl">
+          <div className="bg-linear-to-br from-indigo-900 to-slate-900 p-8 rounded-[3rem] text-white relative overflow-hidden flex flex-col justify-end shadow-xl min-h-[300px]">
             <div className="absolute top-0 right-0 p-8 opacity-10 transform scale-150 rotate-12 text-6xl">💸</div>
             <h3 className="text-2xl font-serif font-bold mb-2 italic">Luxury Governance</h3>
-            <p className="text-slate-400 text-sm mb-6">Running a server is expensive. Mepa's wisdom is priceless. Keep your vibes high and your bans frequent.</p>
+            <p className="text-slate-400 text-sm mb-6 leading-relaxed">Running {selectedServer.name} is a statement. Mepa's wisdom is the standard. Keep your vibes high and your bans frequent.</p>
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-slate-500">
                 <span>Server Aura</span>
-                <span className="text-pink-400">Immaculate ✨</span>
+                <span className="text-indigo-400">Immaculate ✨</span>
               </div>
-              <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-pink-500 to-purple-500 h-full w-[85%]"></div>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-linear-to-r from-indigo-500 to-purple-500 h-full w-[85%]"></div>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
-            <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-xl shadow-inner">⚡</div>
-            <div>
-              <h4 className="text-sm font-bold text-slate-800">Bot Heartbeat</h4>
-              <p className="text-xs text-slate-500">Mepa is judging 4,102 users in real-time.</p>
             </div>
           </div>
         </div>

@@ -69,7 +69,7 @@ export const searchMusic = async (query: string) => {
             required: ["title", "artist", "platform", "duration", "verdict", "link"]
           }
         },
-        systemInstruction: "You are Mepa, the dark feminine Discord bot. You are acting as a Music API. Return realistic song data with a 'verdict' where you judge the vibe. Only return the JSON array."
+        systemInstruction: "You are Mepa, the dark feminine Discord bot. You are acting as a Music API. Find real, high-quality songs that fit the dark feminine, empowering, and moody aesthetic. Return realistic song data with a 'verdict' where you judge the vibe. Only return the JSON array."
       }
     });
 

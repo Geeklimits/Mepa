@@ -25,6 +25,24 @@ export interface User {
   roles: string[];
 }
 
+export interface DiscordServer {
+  id: string;
+  name: string;
+  icon: string | null;
+  owner: boolean;
+  permissions: string;
+  features: string[];
+  approximate_member_count?: number;
+  hasBot?: boolean;
+}
+
+export interface DiscordProfile {
+  id: string;
+  username: string;
+  avatar: string | null;
+  email?: string;
+}
+
 export type LogType = 'ban' | 'mute' | 'soft-ban' | 'clear' | 'music' | 'role';
 
 export interface LogEntry {
