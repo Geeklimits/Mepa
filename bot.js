@@ -67,6 +67,7 @@ General Rules:
 
 client.on('ready', () => {
     console.log(`🔮 Mepa is online as ${client.user.tag}`);
+    console.log(`🔗 Invite Link: https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`);
 });
 
 async function logAction(action, subject, context) {
@@ -84,6 +85,13 @@ client.on('messageCreate', async (message) => {
 
     const content = message.content.toLowerCase();
     const triggers = ['love', 'breakup', 'boyfriend', 'fashion', 'money', 'hustle', 'men', 'dating'];
+
+    // --- REACTION BOT LOGIC ---
+    if (triggers.some(t => content.includes(t))) {
+        message.react('💅'); // React with sass
+        if (content.includes('money')) message.react('💸');
+        if (content.includes('love')) message.react('💔');
+    }
 
     if (message.mentions.has(client.user) || triggers.some(t => content.includes(t))) {
         try {
@@ -105,6 +113,9 @@ client.on('messageCreate', async (message) => {
         }
     }
 
+    // --- COMMANDS ---
+
+    // .clear
     if (message.content.startsWith('.clear')) {
         if (!message.member.permissions.has('ManageMessages')) return message.reply("You don't have the aura to delete messages. Sit down. 💅");
         const args = message.content.split(' ');
@@ -112,12 +123,58 @@ client.on('messageCreate', async (message) => {
         if (amount > 100) return message.reply("I can only clear 100 messages at a time.");
 
         await message.channel.bulkDelete(amount, true).catch(console.error);
-
-        // Log to Supabase
         logAction('CLEARED', `#${message.channel.name}`, `${amount} messages deleted by ${message.author.username}`);
-
         const msg = await message.channel.send(`Cleaned up ${amount} messages. They were mid anyway. 🗑️`);
         setTimeout(() => msg.delete(), 5000);
+    }
+
+    // .kick @user
+    if (message.content.startsWith('.kick')) {
+        if (!message.member.permissions.has('KickMembers')) return message.reply("Nice try, but you're not an admin. 💅");
+        const memberToKick = message.mentions.members.first();
+        if (!memberToKick) return message.reply("Who are we kicking? Tag them.");
+        if (!memberToKick.kickable) return message.reply("I can't kick them. They might be too powerful (or invited by me).");
+
+        await memberToKick.kick("Kicked by Mepa command");
+        logAction('KICK', memberToKick.user.tag, `Kicked by ${message.author.tag}`);
+        message.channel.send(`${memberToKick.user.username} has been removed. The vibe has improved immediately. ✨`);
+    }
+
+    // .ban @user
+    if (message.content.startsWith('.ban')) {
+        if (!message.member.permissions.has('BanMembers')) return message.reply("You can't ban people. That's *my* job (and admins).");
+        const memberToBan = message.mentions.members.first();
+        if (!memberToBan) return message.reply("Tag the dusty you want to ban.");
+
+        await memberToBan.ban({ reason: "Banned by Mepa" });
+        logAction('BAN', memberToBan.user.tag, `Banned by ${message.author.tag}`);
+        message.channel.send(`${memberToBan.user.username} is gone forever. Good riddance. 🔨`);
+    }
+
+    // .recommend <mood/genre> (Music)
+    if (message.content.startsWith('.recommend')) {
+        const query = message.content.replace('.recommend', '').trim();
+        if (!query) return message.reply("Tell me the vibe. e.g., `.recommend dark feminine rap`");
+
+        // Use Gemini to generate JSON
+        try {
+            message.channel.sendTyping();
+            const response = await ai.models.generateContent({
+                model: 'gemini-1.5-flash',
+                contents: `Generate a JSON list of 3 songs matching vibe "${query}". Format: [{"title": "Song", "artist": "Artist", "reason": "Why Mepa likes it"}]. Return ONLY JSON.`,
+            });
+            const text = response.text().replace(/```json|```/g, '').trim();
+            const songs = JSON.parse(text);
+
+            let replyText = `**Mepa's Curated Vibe for "${query}"** 🎧\n`;
+            songs.forEach(song => {
+                replyText += `- **${song.title}** by ${song.artist}: _${song.reason}_\n`;
+            });
+            message.reply(replyText);
+        } catch (e) {
+            console.error(e);
+            message.reply("My Spotify is lagging. Look it up yourself. 🙄");
+        }
     }
 
     // Test Welcome Command
