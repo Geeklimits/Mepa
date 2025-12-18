@@ -119,6 +119,49 @@ client.on('messageCreate', async (message) => {
         const msg = await message.channel.send(`Cleaned up ${amount} messages. They were mid anyway. 🗑️`);
         setTimeout(() => msg.delete(), 5000);
     }
+
+    // Test Welcome Command
+    if (message.content.startsWith('.testwelcome')) {
+        client.emit('guildMemberAdd', message.member);
+        message.reply("Simulating welcome event... check the welcome channel. 🎀");
+    }
+});
+
+// --- WELCOME EVENT ---
+client.on('guildMemberAdd', async (member) => {
+    // 1. Find the channel
+    const channel = member.guild.channels.cache.find(ch =>
+        ch.name.includes('welcome') || ch.name.includes('general') || ch.name.includes('chat')
+    );
+
+    if (!channel) return;
+
+    // 2. Create the Embed (High Maintenance Vibe)
+    const { EmbedBuilder } = await import('discord.js');
+
+    // Gradient-like effect using a rich "Dark Feminine" Hex color (Deep Rose/Mauve)
+    // Discord only allows one solid color for the side bar.
+    const embed = new EmbedBuilder()
+        .setColor('#D4AF37') // Gold/Luxury Color
+        .setTitle('✨ A New Muse Has Arrived')
+        .setDescription(`Welcome to the inner circle, **${member.user.username}**. \n\nWe were waiting for someone with actual taste to show up. Don't disappoint us.`)
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
+        .setImage('https://i.imgur.com/7u537kF.png') // A placeholder "Luxury/Dark" banner or divide
+        .addFields(
+            { name: '📅 Member Since', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
+            { name: '💅 Vibe Check', value: 'Pending...', inline: true }
+        )
+        .setFooter({ text: 'Mepa | High Standards Only', iconURL: client.user.displayAvatarURL() })
+        .setTimestamp();
+
+    // 3. Send Message
+    channel.send({
+        content: `Hey ${member}, welcome to the club. 🍸`,
+        embeds: [embed]
+    }).catch(err => console.error("Could not send welcome message:", err));
+
+    // 4. Log to Supabase
+    logAction('JOIN', member.user.tag, 'User joined the server.');
 });
 
 client.login(process.env.DISCORD_TOKEN).catch(console.error);
