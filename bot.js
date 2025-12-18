@@ -51,7 +51,7 @@ const client = new Client({
 
 // Initialize AI
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.API_KEY || '');
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 
 // Initialize DisTube
 const distube = new DisTube(client, {
@@ -184,7 +184,7 @@ client.on('messageCreate', async (message) => {
                     }
                 ]);
                 responseText = result.response.text();
-            } else {
+            } else if (groq) {
                 // Use Groq for Text Sass (Faster, Unfiltered)
                 let prompt = message.content;
                 if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
@@ -201,6 +201,33 @@ client.on('messageCreate', async (message) => {
                     temperature: 1.0,
                 });
                 responseText = completion.choices[0]?.message?.content || "I'm protecting my peace right now. 🥀";
+            } else {
+                // Fallback to Gemini if Groq key is missing
+                const model = ai.getGenerativeModel({
+                    model: 'gemini-1.5-flash',
+                    systemInstruction: SYSTEM_INSTRUCTION,
+                    safetySettings: [
+                        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    ]
+                });
+
+                const history = conversationHistory.get(message.channel.id) || [];
+                const chat = model.startChat({
+                    history: history,
+                    generationConfig: {
+                        temperature: 1.0,
+                        maxOutputTokens: 500,
+                    },
+                });
+
+                let prompt = message.content;
+                if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
+
+                const result = await chat.sendMessage(prompt);
+                responseText = result.response.text();
             }
 
             // Update history (for future context)
