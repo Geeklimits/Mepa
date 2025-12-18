@@ -6,7 +6,7 @@ const IntegrationView: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-12">
-      <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
+      <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm relative overflow-hidden">
         <div className="relative z-10">
           <h3 className="text-3xl font-bold text-slate-900 mb-2">Mepa is Ready.</h3>
           <p className="text-slate-500 mb-8 max-w-xl">
