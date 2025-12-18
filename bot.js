@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { DisTube } from 'distube';
 import { YouTubePlugin } from '@distube/youtube';
 import { SpotifyPlugin } from '@distube/spotify';
+import axios from 'axios';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -144,12 +145,12 @@ client.on('messageCreate', async (message) => {
         message.member?.displayName.toLowerCase().includes(name)
     );
 
-    if (message.mentions.has(client.user) || content.includes('mepa') || triggers.some(t => content.includes(t)) || isTarget) {
+    const isRoastRequest = content.includes('pfp') || content.includes('avatar') || content.includes('rate me') || content.includes('roast me') || content.includes('look at me');
+    const isProactiveMatch = Math.random() < 0.05; // 5% chance to chime in on anything
+
+    if (message.mentions.has(client.user) || content.includes('mepa') || triggers.some(t => content.includes(t)) || isTarget || isRoastRequest || isProactiveMatch) {
         try {
             message.channel.sendTyping();
-
-            // Build context from history
-            const history = conversationHistory.get(message.channel.id) || [];
 
             const model = ai.getGenerativeModel({
                 model: 'gemini-1.5-flash',
@@ -162,20 +163,44 @@ client.on('messageCreate', async (message) => {
                 ]
             });
 
-            const chat = model.startChat({
-                history: history,
-                generationConfig: {
-                    temperature: 0.9,
-                    maxOutputTokens: 500,
-                },
-            });
+            let responseText = "";
 
-            const prompt = isTarget
-                ? `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`
-                : message.content;
+            if (isRoastRequest) {
+                const avatarURL = message.author.displayAvatarURL({ extension: 'png', size: 512 });
+                const imageResponse = await axios.get(avatarURL, { responseType: 'arraybuffer' });
+                const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
 
-            const result = await chat.sendMessage(prompt);
-            const responseText = result.response.text();
+                const prompt = `[SYSTEM: The user has asked you to look at their profile picture or roast them. BE DEVASTATING. Analyze their style, vibe, and energy from the image. Use high-end "Dark Feminine" insults.] ${message.content}`;
+
+                const result = await model.generateContent([
+                    prompt,
+                    {
+                        inlineData: {
+                            data: base64Image,
+                            mimeType: "image/png"
+                        }
+                    }
+                ]);
+                responseText = result.response.text();
+            } else {
+                const history = conversationHistory.get(message.channel.id) || [];
+                const chat = model.startChat({
+                    history: history,
+                    generationConfig: {
+                        temperature: 1.0,
+                        maxOutputTokens: 500,
+                    },
+                });
+
+                let prompt = message.content;
+                if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
+                if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
+                    prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
+                }
+
+                const result = await chat.sendMessage(prompt);
+                responseText = result.response.text();
+            }
 
             // Update history
             addToHistory(message.channel.id, 'user', message.content);
