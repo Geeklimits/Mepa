@@ -1,13 +1,32 @@
 import React, { useState } from 'react';
 
 const WelcomeView: React.FC = () => {
-    const [channel, setChannel] = useState('#Welcome');
-    const [message, setMessage] = useState('Hey {user}, Welcome to {server}! 🍸');
-    const [bgUrl, setBgUrl] = useState('https://i.pinimg.com/originals/a0/0d/16/a00d165f6795f9c5ad9ba5aa19762696.gif'); // Aesthetic default
+    // Load from localStorage or defaults
+    const [channel, setChannel] = useState(() => localStorage.getItem('mepa_welcome_channel') || '#Welcome');
+    const [message, setMessage] = useState(() => localStorage.getItem('mepa_welcome_message') || 'Hey {user}, Welcome to {server}! 🍸');
+    const [bgUrl, setBgUrl] = useState(() => localStorage.getItem('mepa_welcome_bg') || 'https://i.pinimg.com/originals/a0/0d/16/a00d165f6795f9c5ad9ba5aa19762696.gif');
     const [embedColor, setEmbedColor] = useState('#D4AF37');
 
     const insertVariable = (variable: string) => {
         setMessage(prev => prev + ` ${variable}`);
+    };
+
+    const handleSave = () => {
+        localStorage.setItem('mepa_welcome_channel', channel);
+        localStorage.setItem('mepa_welcome_message', message);
+        localStorage.setItem('mepa_welcome_bg', bgUrl);
+        alert("Configuration Saved! 💾 (Note: For the actual bot to see local uploads, you'll need to host them. Dashboard preview saved.)");
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setBgUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     return (
@@ -36,15 +55,25 @@ const WelcomeView: React.FC = () => {
 
                         {/* Custom Background Input */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Background Image URL</label>
+                            <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Background Image</label>
+                            
+                            {/* URL Input */}
                             <input 
                                 type="text" 
                                 value={bgUrl}
                                 onChange={(e) => setBgUrl(e.target.value)}
                                 placeholder="https://..."
-                                className="w-full bg-slate-50 text-slate-900 rounded-xl p-3 border border-slate-200 focus:ring-2 focus:ring-pink-500 outline-none font-medium text-sm"
+                                className="w-full bg-slate-50 text-slate-900 rounded-xl p-3 border border-slate-200 focus:ring-2 focus:ring-pink-500 outline-none font-medium text-sm mb-2"
                             />
-                            <p className="text-[10px] text-slate-400 mt-1">Paste a direct link to an image/gif (Pinterest, Imgur, etc.)</p>
+                            
+                            {/* File Upload */}
+                            <div className="flex items-center space-x-2">
+                                <label className="flex-1 cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors text-center border border-slate-200">
+                                    <span>📂 Upload from Device</span>
+                                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                                </label>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">Accepts URLs or Image Uploads.</p>
                         </div>
 
                         {/* Message Input & Variables */}
@@ -71,7 +100,10 @@ const WelcomeView: React.FC = () => {
                         </div>
 
                         {/* Save Button */}
-                        <button className="w-full bg-slate-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-black transition-all shadow-lg active:scale-95">
+                        <button 
+                            onClick={handleSave}
+                            className="w-full bg-slate-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-black transition-all shadow-lg active:scale-95"
+                        >
                             Save Configuration 💾
                         </button>
                     </div>

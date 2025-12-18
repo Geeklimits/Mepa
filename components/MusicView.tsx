@@ -186,13 +186,28 @@ const MusicView: React.FC<MusicViewProps> = ({ onLog }) => {
             <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-pink-500/10 rounded-full blur-[100px]"></div>
 
             <div className="flex flex-col md:flex-row items-center space-y-8 md:space-y-0 md:space-x-12 relative z-10">
-              <div className="w-64 h-64 bg-slate-800 rounded-[3rem] shadow-2xl flex items-center justify-center text-8xl shrink-0 overflow-hidden border border-slate-700">
-                <img
-                  src={`https://picsum.photos/seed/${currentSong.title}/600`}
-                  alt="Album Art"
-                  className={`w-full h-full object-cover transition-all duration-1000 ${isPlaying ? 'scale-110' : 'scale-100 opacity-40 grayscale'}`}
-                />
-                {!isPlaying && <div className="absolute inset-0 flex items-center justify-center text-4xl">🧘‍♀️</div>}
+              <div className="w-64 h-64 bg-slate-800 rounded-[3rem] shadow-2xl flex items-center justify-center text-8xl shrink-0 overflow-hidden border border-slate-700 relative group">
+                {currentSong.link && currentSong.link.includes('youtube') ? (
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={currentSong.link.replace('watch?v=', 'embed/').split('&')[0] + "?autoplay=1&controls=0&modestbranding=1"}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className={`w-full h-full object-cover rounded-[3rem] ${isPlaying ? 'opacity-100' : 'opacity-50'}`}
+                  ></iframe>
+                ) : (
+                  <>
+                    <img
+                      src={`https://picsum.photos/seed/${currentSong.title}/600`}
+                      alt="Album Art"
+                      className={`w-full h-full object-cover transition-all duration-1000 ${isPlaying ? 'scale-110' : 'scale-100 opacity-40 grayscale'}`}
+                    />
+                    {!isPlaying && <div className="absolute inset-0 flex items-center justify-center text-4xl">🧘‍♀️</div>}
+                  </>
+                )}
               </div>
 
               <div className="flex-1 text-center md:text-left">
