@@ -12,6 +12,7 @@ export enum BotTab {
   MUSIC = 'music',
   ROLES = 'roles',
   PERSONALITY = 'personality',
+  WELCOME = 'welcome',
   INTEGRATION = 'integration'
 }
 

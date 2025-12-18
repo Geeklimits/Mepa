@@ -11,6 +11,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const navItems = [
     { id: BotTab.DASHBOARD, label: 'Overview', icon: '✨' },
     { id: BotTab.MODERATION, label: 'Moderation', icon: '🛡️' },
+    { id: BotTab.WELCOME, label: 'Welcome', icon: '🎀' },
     { id: BotTab.MUSIC, label: 'Music Player', icon: '🎵' },
     { id: BotTab.ROLES, label: 'Reaction Roles', icon: '🎭' },
     { id: BotTab.PERSONALITY, label: 'Chat Mepa', icon: '🔮' },

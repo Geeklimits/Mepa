@@ -9,6 +9,7 @@ import MusicView from './components/MusicView';
 import RolesView from './components/RolesView';
 import PersonalityView from './components/PersonalityView';
 import IntegrationView from './components/IntegrationView';
+import WelcomeView from './components/WelcomeView';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<BotTab>(BotTab.DASHBOARD);
@@ -45,6 +46,7 @@ const App: React.FC = () => {
     switch (activeTab) {
       case BotTab.DASHBOARD: return <DashboardView logs={logs} />;
       case BotTab.MODERATION: return <ModerationView onLog={addLog} />;
+      case BotTab.WELCOME: return <WelcomeView />;
       case BotTab.MUSIC: return <MusicView onLog={addLog} />;
       case BotTab.ROLES: return <RolesView onLog={addLog} />;
       case BotTab.PERSONALITY: return <PersonalityView />;
@@ -56,10 +58,10 @@ const App: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 overflow-hidden">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
+
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <Header activeTab={activeTab} />
-        
+
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             {renderContent()}
