@@ -1,5 +1,5 @@
 
-import { GoogleGenerativeAI, Type } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 const SYSTEM_INSTRUCTION = `
 You are Mepa, a "Dark Feminine" Discord bot representing the powerful energy of two best friends. 
@@ -23,17 +23,17 @@ INTERACTIVE INTELLIGENCE:
 export const getChloeResponse = async (userInput: string) => {
   try {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY || '';
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
+    if (!apiKey) return "My crystals are dim... (API Key missing) 🥀";
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-flash',
-      contents: userInput,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 1.0,
-        topP: 0.95,
-      },
+      systemInstruction: SYSTEM_INSTRUCTION
     });
-    return response.text || "I'm protecting my peace right now. Try again later. 🥀";
+
+    const result = await model.generateContent(userInput);
+    const response = await result.response;
+    return response.text() || "I'm protecting my peace right now. Try again later. 🥀";
   } catch (error) {
     console.error("Gemini API Error:", error);
     return "The universe is blocking this connection. Probably because your frequency is too low. 🔮";
@@ -47,32 +47,38 @@ export const searchMusic = async (query: string) => {
       console.error("Gemini API Key missing in frontend env");
       return [];
     }
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Find 5 dark, moody, or empowering songs related to the search: "${query}". Return them as a JSON list.`,
-      config: {
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction: "You are Mepa, the dark feminine Discord bot. You are acting as a Music API. Find real, high-quality songs that fit the dark feminine, empowering, and moody aesthetic. Return realistic song data with a 'verdict' where you judge the vibe. Only return the JSON array."
+    });
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: `Find 5 dark, moody, or empowering songs related to the search: "${query}". Return them as a JSON list.` }] }],
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.ARRAY,
+          type: SchemaType.ARRAY,
           items: {
-            type: Type.OBJECT,
+            type: SchemaType.OBJECT,
             properties: {
-              title: { type: Type.STRING },
-              artist: { type: Type.STRING },
-              platform: { type: Type.STRING, description: "Spotify or YouTube" },
-              duration: { type: Type.STRING, description: "e.g. 3:45" },
-              verdict: { type: Type.STRING, description: "Mepa's dark feminine opinion on this song." },
-              link: { type: Type.STRING, description: "A simulated but realistic URL for the song." }
+              title: { type: SchemaType.STRING },
+              artist: { type: SchemaType.STRING },
+              platform: { type: SchemaType.STRING, description: "Spotify or YouTube" },
+              duration: { type: SchemaType.STRING, description: "e.g. 3:45" },
+              verdict: { type: SchemaType.STRING, description: "Mepa's dark feminine opinion on this song." },
+              link: { type: SchemaType.STRING, description: "A simulated but realistic URL for the song." }
             },
             required: ["title", "artist", "platform", "duration", "verdict", "link"]
           }
         },
-        systemInstruction: "You are Mepa, the dark feminine Discord bot. You are acting as a Music API. Find real, high-quality songs that fit the dark feminine, empowering, and moody aesthetic. Return realistic song data with a 'verdict' where you judge the vibe. Only return the JSON array."
       }
     });
 
-    return JSON.parse(response.text || "[]");
+    const response = await result.response;
+    const text = response.text();
+    return JSON.parse(text || "[]");
   } catch (error) {
     console.error("Music Search Error:", error);
     return [];
