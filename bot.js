@@ -153,20 +153,21 @@ client.on('messageCreate', async (message) => {
         try {
             message.channel.sendTyping();
 
-            const model = ai.getGenerativeModel({
-                model: 'gemini-1.5-flash',
-                systemInstruction: SYSTEM_INSTRUCTION,
-                safetySettings: [
-                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-                ]
-            });
-
             let responseText = "";
 
             if (isRoastRequest) {
+                // Use Gemini for Vision
+                const model = ai.getGenerativeModel({
+                    model: 'gemini-1.5-flash',
+                    systemInstruction: SYSTEM_INSTRUCTION,
+                    safetySettings: [
+                        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    ]
+                });
+
                 const avatarURL = message.author.displayAvatarURL({ extension: 'png', size: 512 });
                 const imageResponse = await axios.get(avatarURL, { responseType: 'arraybuffer' });
                 const base64Image = Buffer.from(imageResponse.data, 'binary').toString('base64');
@@ -202,7 +203,7 @@ client.on('messageCreate', async (message) => {
                 responseText = completion.choices[0]?.message?.content || "I'm protecting my peace right now. 🥀";
             }
 
-            // Update history
+            // Update history (for future context)
             addToHistory(message.channel.id, 'user', message.content);
             addToHistory(message.channel.id, 'model', responseText);
 

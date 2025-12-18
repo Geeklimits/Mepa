@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, Type } from "@google/generative-ai";
 
 const SYSTEM_INSTRUCTION = `
 You are Mepa, a "Dark Feminine" Discord bot representing the powerful energy of two best friends. 
