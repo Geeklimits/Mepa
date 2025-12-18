@@ -208,8 +208,9 @@ client.on('messageCreate', async (message) => {
 
             return message.reply(responseText);
         } catch (error) {
-            console.error("Gemini Error Details:", JSON.stringify(error, null, 2));
-            message.reply("The universe is blocking this connection. Probably because your frequency is too low to handle me. 🔮");
+            console.error("Gemini Error Details:", error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            message.reply(`The universe is blocking this connection: ${errorMsg}. Probably because your frequency is too low. 🔮`);
         }
     }
 
@@ -501,4 +502,4 @@ client.on('messageReactionRemove', async (reaction, user) => {
     }
 });
 
-client.login(process.env.DISCORD_TOKEN).catch(console.error);
+client.login(process.env.DISCORD_TOKEN?.trim()).catch(console.error);
