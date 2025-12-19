@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits, Partials, EmbedBuilder, PermissionsBitField } from 'discord.js';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import Groq from 'groq-sdk';
+import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { DisTube } from 'distube';
 import { YouTubePlugin } from '@distube/youtube';
@@ -9,9 +10,10 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 
 // Load environment variables
-dotenv.config();
+dotenv.config(); 
 console.log("🔮 Checking Environment Variables...");
 console.log("DISCORD_TOKEN:", process.env.DISCORD_TOKEN ? "✅ Loaded" : "❌ Missing");
+console.log("NVIDIA_API_KEY:", process.env.NVIDIA_API_KEY ? "✅ Loaded" : "❌ Missing");
 console.log("GEMINI_API_KEY:", (process.env.GEMINI_API_KEY || process.env.API_KEY) ? "✅ Loaded" : "❌ Missing");
 console.log("GROQ_API_KEY:", process.env.GROQ_API_KEY ? "✅ Loaded" : "❌ Missing");
 
@@ -60,6 +62,10 @@ if (geminiKey && !geminiKey.startsWith('AIza')) {
 }
 const ai = new GoogleGenerativeAI(geminiKey);
 const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
+const nvidia = process.env.NVIDIA_API_KEY ? new OpenAI({
+    apiKey: process.env.NVIDIA_API_KEY,
+    baseURL: "https://integrate.api.nvidia.com/v1"
+}) : null;
 
 // Initialize DisTube
 const distube = new DisTube(client, {
@@ -194,8 +200,27 @@ client.on('messageCreate', async (message) => {
                     }
                 ]);
                 responseText = result.response.text();
+            } else if (nvidia) {
+                // Use NVIDIA NIM (Qwen3-Next) for Ultra-Premium Sass
+                let prompt = message.content;
+                if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
+                if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
+                    prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
+                }
+
+                const completion = await nvidia.chat.completions.create({
+                    model: "qwen/qwen3-next-80b-a3b-instruct",
+                    messages: [
+                        { role: "system", content: SYSTEM_INSTRUCTION },
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.6,
+                    top_p: 0.7,
+                    max_tokens: 4096,
+                });
+                responseText = completion.choices[0]?.message?.content || "I'm contemplating my own excellence. 💅";
             } else if (groq) {
-                // Use Groq for Text Sass (Faster, Unfiltered)
+                // Use Groq for Text Sass (Fallback 1)
                 let prompt = message.content;
                 if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
                 if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
@@ -540,7 +565,21 @@ client.on('guildMemberAdd', async (member) => {
 
     // Hybrid Welcome Roast Logic
     let dynamicVerdicts = "";
-    if (groq) {
+    if (nvidia) {
+        try {
+            const completion = await nvidia.chat.completions.create({
+                model: "qwen/qwen3-next-80b-a3b-instruct",
+                messages: [
+                    { role: "system", content: "You are Mepa. A new user just joined the server. Give them a short (1 sentence) classy, sassy, and slightly judgmental welcome. Judge them as a 'Dark Feminine' queen would. Short and sharp." },
+                    { role: "user", content: `New user name: ${member.user.username}` }
+                ],
+                temperature: 0.6,
+            });
+            dynamicVerdicts = completion.choices[0]?.message?.content || "Another one? Let's hope you have taste. 🥀";
+        } catch (e) {
+            dynamicVerdicts = "The universe is vibrating low today... welcome anyway. 🥂";
+        }
+    } else if (groq) {
         try {
             const completion = await groq.chat.completions.create({
                 messages: [
