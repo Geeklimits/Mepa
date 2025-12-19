@@ -70,14 +70,20 @@ const nvidia = process.env.NVIDIA_API_KEY ? new OpenAI({
 // Initialize DisTube
 const distube = new DisTube(client, {
     plugins: [
-        new YouTubePlugin(),
+        new YouTubePlugin({
+            ytdlOptions: {
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25,
+                filter: 'audioonly',
+            }
+        }),
         new SpotifyPlugin()
     ],
     emitNewSongOnly: true,
     emitAddSongWhenCreatingQueue: false,
     leaveOnEmpty: true,
     leaveOnFinish: false,
-    nsig: true // Fix for some YouTube restricted videos
+    nsig: true
 });
 
 // Advanced Debug Logs for Music
@@ -499,12 +505,15 @@ client.on('messageCreate', async (message) => {
 
         try {
             console.log(`[MUSIC] Attempting to play: ${query} for ${message.author.username}`);
+            // Check if it's a playlist link
+            const isPlaylist = query.includes('list=') || query.includes('/playlist');
+
             await distube.play(voiceChannel, query, {
                 message,
                 textChannel: message.channel,
                 member: message.member,
             });
-            console.log(`[MUSIC] Search/play triggered successfully.`);
+            console.log(`[MUSIC] Play request submitted. Playlist: ${isPlaylist}`);
         } catch (e) {
             console.error("[MUSIC ERROR]", e);
             message.reply(`The speakers are bleeding: ${e.message.slice(0, 100)}. Probably your low-quality taste. 🙄`);
