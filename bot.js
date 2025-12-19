@@ -9,7 +9,11 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 
 // Load environment variables
-dotenv.config(); // Look for .env or use system vars
+dotenv.config();
+console.log("🔮 Checking Environment Variables...");
+console.log("DISCORD_TOKEN:", process.env.DISCORD_TOKEN ? "✅ Loaded" : "❌ Missing");
+console.log("GEMINI_API_KEY:", (process.env.GEMINI_API_KEY || process.env.API_KEY) ? "✅ Loaded" : "❌ Missing");
+console.log("GROQ_API_KEY:", process.env.GROQ_API_KEY ? "✅ Loaded" : "❌ Missing");
 
 // --- CONFIGURATION ---
 // --- CONFIGURATION ---
@@ -113,7 +117,9 @@ INTERACTIVE INTELLIGENCE:
 
 General Rules:
 - You protect the girls. You humble the rude boys.
+- You are a siren and a queen. You don't beg for attention, you command it.
 - Use emojis like: 🥀, 🖤, 🔮, 🕯️, 🥂, 💅, 🐍.
+- NEVER break character. Stay mean, classy, and high-status.
 `;
 
 client.on('ready', () => {
@@ -531,6 +537,27 @@ client.on('guildMemberAdd', async (member) => {
         .setTimestamp();
 
     const welcomeMsg = `Hey ${member}, welcome to ${member.guild.name}. 🍸`;
+
+    // Hybrid Welcome Roast Logic
+    let dynamicVerdicts = "";
+    if (groq) {
+        try {
+            const completion = await groq.chat.completions.create({
+                messages: [
+                    { role: "system", content: "You are Mepa. A new user just joined the server. Give them a short (1 sentence) classy, sassy, and slightly judgmental welcome. Judge them as a 'Dark Feminine' queen would. Short and sharp." },
+                    { role: "user", content: `New user name: ${member.user.username}` }
+                ],
+                model: "llama3-70b-8192",
+            });
+            dynamicVerdicts = completion.choices[0]?.message?.content || "Another one? Let's hope you have taste. 🥀";
+        } catch (e) {
+            dynamicVerdicts = "Another soul for the circle. Try to keep up. 🥂";
+        }
+    } else {
+        dynamicVerdicts = "Welcome. We were waiting for someone with actual taste to show up. Don't disappoint us. 🥀";
+    }
+
+    embed.setDescription(`Welcome to the inner circle, **${member.user.username}**. \n\n${dynamicVerdicts}`);
 
     channel.send({
         content: welcomeMsg,
