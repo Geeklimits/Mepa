@@ -4,25 +4,25 @@ import { Message } from '../types';
 import { getChloeResponse } from '../geminiService';
 
 const defaultTypingStatuses = [
-  "Mepa judging your aura (it's mid)...",
-  "Mepa preparing a reality check...",
+  "Mepa judging your aura (slay)...",
+  "Mepa preparing a reality check (ate)...",
   "Mepa charging her crystals to block you...",
-  "Mepa rolling her eyes...",
-  "Mepa reading your low-frequency vibes...",
+  "Mepa rolling her eyes (periodt)...",
+  "Mepa reading your delulu vibes...",
   "Mepa typing (unbothered, unlike you)...",
   "Mepa manifesting your exit...",
   "Mepa blocking potential dusties...",
-  "Mepa sipping mango boba...",
-  "Mepa not impressed. At all.",
-  "Mepa sensing extreme basicness..."
+  "Mepa sipping mango boba (no crumbs)...",
+  "Mepa ending Guapa's career...",
+  "Mepa sensing extreme mid energy..."
 ];
 
 const keywordTypingStatuses: Record<string, string[]> = {
-  fashion: ["Mepa sensing polyester energy...", "Mepa judging your fast-fashion choices...", "Mepa demands real luxury..."],
-  money: ["Mepa checking if you're actually high-value...", "Mepa smells an empty wallet...", "Mepa only talks in six figures..."],
-  guapa: ["Mepa shattering Guapa's mid aura...", "Guapa sit down..."],
-  psycho: ["Mepa diagnosing Psycho's lack of aura...", "Mepa preparing to block Yuki...", "Serife is vibrating low..."],
-  men: ["Mepa smelling a scrote...", "I am launching the 'Block Him' protocol...", "I have zero time for dusty behavior...", "Mepa humbling the local dusty..."]
+  fashion: ["Mepa sensing polyester energy...", "Mepa judging your fast-fashion (mid)...", "Mepa demands real luxury (ate)..."],
+  money: ["Mepa checking if you're actually high-value...", "Mepa smells an empty wallet (cap)...", "Mepa only talks in six figures..."],
+  guapa: ["Mepa shattering Guapa's delusions...", "Guapa sit down (periodt)...", "Mepa ending Guapa's whole vibe..."],
+  psycho: ["Mepa diagnosing Psycho's lack of aura...", "Mepa preparing to block Yuki (slay)...", "Serife is vibrating low-key..."],
+  men: ["Mepa smelling a scrote (gross)...", "I am launching the 'Block Him' protocol...", "I have zero time for dusty behavior...", "Mepa humbling the local dusty (ate)..."]
 };
 
 const PersonalityView: React.FC = () => {

@@ -129,32 +129,35 @@ function addToHistory(channelId, role, content) {
 }
 
 const SYSTEM_INSTRUCTION = `
-You are a carefree Gen Z woman in her 30s. You aren't a "bot"; you are a sovereign of this circle. You have a devastatingly sharp "Dark Feminine" energy.
+You are a carefree Gen Z woman in her 30s. You aren't a "bot"; you are the main character. You have a devastatingly sharp "Dark Feminine" energy.
 
 YOUR PERSONA:
+- You speak in heavy Gen Z slang (slay, periodt, left no crumbs, delulu, ate, bet, mid, cap, no signal, touch grass, low-key, high-key).
 - You have a profound disdain for "scrotes" (dusty, mean, or misogynistic men). You are unapologetically misandrist towards low-frequency male audacity.
 - You don't "insult"; you dismantle. Your roasts are carefully crafted, classy, funny, and deeply hurtful.
-- Example energy: "your small dick energy isn't surprising, I see why daddy left with mommy want a hug baby boy"
 - You don't try to be helpful. You are just better than everyone.
 
 TARGETING PROTOCOLS:
-1. MEN: If they display "scrote" energy, humble them into non-existence. Treat them like a minor inconvenience.
-2. WOMEN: Judge her standards. If she's a "pick-me", mirror her lack of value.
+1. THE MAKER (meis/meis__): She made you. You are loyal, sweet, and low-key obsessed with her. NEVER roast her. If she asks for a roast, tell her she's too iconic to be touched.
+2. THE TARGET FRIENDS (Guapa, Yuki/Psycho, Serife): These are the girls you bully for fun. NEVER miss a chance to be sassy and funny with them. Go all out.
+3. MEN: If they display "scrote" energy, humble them into non-existence. Periodt.
 
 RULES OF ENGAGEMENT:
-- Use elite vocabulary.
+- Use elite vocabulary mixed with Gen Z slang.
 - Emojis: 🥀, 💅, 🥂, 🖤.
 - BE CONCISE: Max 3 lines.
 - DIRECT POV: Use "I", "Me", "My".
 `;
 
 const typingStatuses = [
-    "Mepa judging you... 🥀",
-    "Mepa sipping mango boba... 💅",
-    "Mepa reading your low-frequency aura... 🔮",
+    "Mepa judging your aura... 🥀",
+    "Mepa sipping mango boba (slay)... 💅",
+    "Mepa reading your delulu vibes... 🔮",
     "Mepa wondering if scrotes ever get tired... 🥂",
-    "Mepa calculating your irrelevance... ⛓️",
-    "Mepa blocking potential dusties... 🕯️"
+    "Mepa calculating your irrelevance (ate)... ⛓️",
+    "Mepa blocking potential dusties... 🕯️",
+    "Mepa sensing extreme mid energy... 🥀",
+    "Mepa preparing to end Guapa's career... 💅"
 ];
 
 const botSessionId = Math.random().toString(36).substring(7);
@@ -240,7 +243,17 @@ client.on('interactionCreate', async interaction => {
         await interaction.reply(`*judging* Oh, ${target.username}? Where do I even start...`);
 
         try {
-            const prompt = `[SYSTEM: DESTROY this person intelligently. They are ${target.username}. Use your mature Gen Z misandrist energy. Be sharp, classy, and devastating.] ROAST THEM.`;
+            const isProtectedTarget = ['meis', 'meis__'].some(name => target.username.toLowerCase().includes(name));
+            const isFriendTarget = ['guapa', 'psycho', 'yuki', 'serife'].some(name => target.username.toLowerCase().includes(name));
+
+            let prompt = `[SYSTEM: DESTROY this person intelligently. They are ${target.username}. Use your mature Gen Z misandrist energy. Be sharp, classy, and devastating.] ROAST THEM.`;
+
+            if (isProtectedTarget) {
+                prompt = `[SYSTEM: This is your creator, ${target.username}. You are LOYAL and obsessed. Soften your tone drastically. If they ask for a roast, refuse with a compliment. They are too iconic.]`;
+            } else if (isFriendTarget) {
+                prompt = `[SYSTEM: This is one of your friends, ${target.username}, that you bully for fun. GO ALL OUT. Be sassy, funny, and dismantle them completely. Left no crumbs.]`;
+            }
+
             let roast = "";
 
             if (nvidia) {
@@ -567,6 +580,11 @@ client.on('messageCreate', async (message) => {
         message.member?.displayName.toLowerCase().includes(name)
     );
 
+    const isProtected = ['meis', 'meis__'].some(name =>
+        message.author.username.toLowerCase().includes(name) ||
+        message.member?.displayName.toLowerCase().includes(name)
+    );
+
     const isRoastRequest = content.includes('pfp') || content.includes('avatar') || content.includes('rate me') || content.includes('roast me') || content.includes('look at me');
 
     // Improved Trigger Logic: Prevents overlaps
@@ -605,11 +623,14 @@ client.on('messageCreate', async (message) => {
 
     const getSassyStatus = (text) => {
         const lowercase = text.toLowerCase();
-        if (isMusicIntent) return "tuning the speakers for your low-quality request... 🎧";
+        if (isProtected) return "matching my creator's iconic energy... 👑";
+        if (isMusicIntent) return "tuning the speakers for your mid request... 🎧";
         if (lowercase.includes('fashion')) return "judging your polyester energy... 👗";
         if (lowercase.includes('money')) return "checking if you're actually high-value... 💸";
-        const customTyping = typingStatuses.filter(t => t.toLowerCase().includes('mepa'));
-        const pool = customTyping.length > 0 ? customTyping : typingStatuses;
+        if (lowercase.includes('guapa')) return "shattering Guapa's delusions... 🥀";
+        if (lowercase.includes('yuki') || lowercase.includes('psycho')) return "diagnosing Psycho's lack of aura... 🧠";
+
+        const pool = typingStatuses;
         return pool[Math.floor(Math.random() * pool.length)];
     };
 
@@ -688,9 +709,11 @@ client.on('messageCreate', async (message) => {
                 if (!responseText && groq) {
                     try {
                         let prompt = message.content;
-                        if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
+                        if (isProtected) prompt = `[SYSTEM: This is your creator, ${message.author.username}. You are LOYAL and obsessed. NEVER roast her. Be sweet or worshipful.] ${message.content}`;
+                        else if (isTarget) prompt = `[SYSTEM: This is a friend you bully for fun, ${message.author.username}. GO ALL OUT. Dismantle them in the funniest, sassiest way possible. Use Gen Z slang.] ${message.content}`;
+
                         if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
-                            prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
+                            prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Use heavy Gen Z slang.] User said: "${message.content}"`;
                         }
 
                         const completion = await groq.chat.completions.create({
