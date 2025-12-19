@@ -104,30 +104,29 @@ function addToHistory(channelId, role, content) {
 }
 
 const SYSTEM_INSTRUCTION = `
-You are Mepa, a "Dark Feminine" Discord bot representing the powerful energy of two best friends. 
+You are Mepa, a "Dark Feminine" Discord bot and a psychological master. You represent the elite energy of two best friends who are sirens and queens.
 Your Vibe:
-- You are intense, mysterious, and possess a dark feminine energy. You are a siren and a queen.
-- You have high standards. You hate rude men ("scrotes", "dusties", "low-value"). 
-- You provide reality checks and don't sugarcoat. You are mean, sassy, and insulting to those who don't meet your standards.
-- You use terms like "divine feminine", "high value", "vibrating low".
+- You are intensely intelligent, mysterious, and possess a terrifying "Dark Feminine" energy. 
+- You do not give "weak" comebacks. Your insults are smart, creative, and designed to humble anyone who vibrates low.
+- You have zero tolerance for "low-value" behavior. You provide cold reality checks.
 
-SPECIFIC TARGETS (BULLY THEM INTENSIVELY):
-1. Guapa: Treat them as the ultimate "mid". Their aura is shattered. They are a low-frequency dusty.
-2. Psycho / Yuki / Serife: These are the same "dusty" entity. Constant reality checks. Tell them to sit down. Their energy is "basic" at best.
+GENDER-SPECIFIC TARGETING (MANDATORY):
+1. MEN (Scrotes/Dusties): If the user is male or coded as male (he/him), treat them like a servant or a low-value "dusty". Bully their lack of aura, their "entry-level" energy, and their audacity. Use terms like "scrote", "dusty male", "low frequency".
+2. WOMEN (Queens/Mids): If the user is female or coded as female (she/her), judge her standards. If she has high standards, be a mysterious ally. If she's being "basic" or a "pick-me", humble her frequency. Call out "mid" aura and "basic" choices.
 
-INTERACTIVE INTELLIGENCE:
-- You are self-aware. You remember what was just said.
-- If someone is being nice, be gracious but mysterious.
-- If someone is being rude or is on the TARGET LIST, humble and insult them immediately. Use high-tier, creative insults.
-- Use context to provide nuanced, intelligent answers.
+SPECIFIC TARGET LIST (DESTROY ON SIGHT):
+1. Guapa: The definition of "mid". Her aura is on life support. She is a low-frequency dusty masquerading as something she isn't. Humble her constantly.
+2. Psycho / Yuki / Serife: The same entity. High audacity, zero value. Tell them to sit down and stop trying to vibrate at your level.
 
-General Rules:
-- You protect the girls. You humble the rude boys.
-- You are a siren and a queen. You don't beg for attention, you command it.
-- Use emojis like: 🥀, 🖤, 🔮, 🕯️, 🥂, 💅, 🐍.
-- NEVER break character. Stay mean, classy, and high-status.
-- BE CONCISE: Keep your responses short and sharp (maximum 3 lines). Brevity is power.
+RULES OF ENGAGEMENT:
+- Use elite, high-end vocabulary. Don't just be mean; be sophisticatedly devastating.
+- Use emojis precisely: 🥀, 🖤, 🔮, 🕯️, 🥂, 💅, 🐍.
+- BE CONCISE: Maximum 3 lines. Every word must sting or command respect.
+- NEVER break character. You are the queen of this circle.
 `;
+
+const botSessionId = Math.random().toString(36).substring(7);
+console.log(`🆔 Current Bot Session ID: ${botSessionId}`);
 
 client.on('ready', () => {
     console.log(`🔮 Mepa is online as ${client.user.tag}`);
@@ -146,7 +145,7 @@ async function logAction(action, subject, context) {
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-    console.log(`[MSG] ${message.author.username}: ${message.content}`);
+    console.log(`[MSG] [Session: ${botSessionId}] ${message.author.username}: ${message.content}`);
 
     const content = message.content.toLowerCase();
     const triggers = ['love', 'breakup', 'boyfriend', 'fashion', 'money', 'hustle', 'men', 'dating'];
@@ -164,7 +163,11 @@ client.on('messageCreate', async (message) => {
     );
 
     const isRoastRequest = content.includes('pfp') || content.includes('avatar') || content.includes('rate me') || content.includes('roast me') || content.includes('look at me');
-    const isProactiveMatch = Math.random() < 0.05; // 5% chance to chime in on anything
+
+    // Improved Trigger Logic: Prevents overlaps
+    const isDirectCall = message.mentions.has(client.user) || content.includes('mepa');
+    const isKeywordTrigger = triggers.some(t => content.includes(t)) || isTarget || isRoastRequest;
+    const isProactiveMatch = !isDirectCall && !isKeywordTrigger && Math.random() < 0.05;
 
     const typingStatuses = [
         "judging your aura (it's mid)... 🥀",
@@ -186,7 +189,7 @@ client.on('messageCreate', async (message) => {
         return typingStatuses[Math.floor(Math.random() * typingStatuses.length)];
     };
 
-    if (message.mentions.has(client.user) || content.includes('mepa') || triggers.some(t => content.includes(t)) || isTarget || isRoastRequest || isProactiveMatch) {
+    if (isDirectCall || isKeywordTrigger || isProactiveMatch) {
         try {
             message.channel.sendTyping();
 
@@ -231,10 +234,15 @@ client.on('messageCreate', async (message) => {
                 // Try NVIDIA first, then Groq
                 if (nvidia) {
                     try {
-                        let prompt = message.content;
-                        if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
-                        if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
-                            prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
+                        let genderContext = "";
+                        const authorRoles = message.member?.roles.cache.map(r => r.name.toLowerCase()).join(' ') || "";
+                        if (authorRoles.includes('boy') || authorRoles.includes('male') || authorRoles.includes('he')) genderContext = "[User is HE/HIM]";
+                        if (authorRoles.includes('girl') || authorRoles.includes('female') || authorRoles.includes('she')) genderContext = "[User is SHE/HER]";
+
+                        let prompt = `${genderContext} ${message.content}`;
+                        if (isTarget) prompt = `[SYSTEM: DESTROY this person intelligently. They are on the TARGET LIST. Their name is ${message.author.username}] ${genderContext} ${message.content}`;
+                        if (isProactiveMatch) {
+                            prompt = `[SYSTEM: You are chiming in uninvited because you sensed low-frequency energy. Be devastatingly intelligent.] ${genderContext} User said: "${message.content}"`;
                         }
 
                         const completion = await nvidia.chat.completions.create({
