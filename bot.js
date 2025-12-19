@@ -10,7 +10,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 
 // Load environment variables
-dotenv.config(); 
+dotenv.config();
 console.log("🔮 Checking Environment Variables...");
 console.log("DISCORD_TOKEN:", process.env.DISCORD_TOKEN ? "✅ Loaded" : "❌ Missing");
 console.log("NVIDIA_API_KEY:", process.env.NVIDIA_API_KEY ? "✅ Loaded" : "❌ Missing");
@@ -165,9 +165,35 @@ client.on('messageCreate', async (message) => {
     const isRoastRequest = content.includes('pfp') || content.includes('avatar') || content.includes('rate me') || content.includes('roast me') || content.includes('look at me');
     const isProactiveMatch = Math.random() < 0.05; // 5% chance to chime in on anything
 
+    const typingStatuses = [
+        "judging your aura (it's mid)... 🥀",
+        "preparing a reality check... 🔮",
+        "charging crytals to block you... 🕯️",
+        "rolling her eyes... 💅",
+        "reading your low-frequency vibes... 🐍",
+        "not impressed. At all. 🥂",
+        "sensing extreme basicness... 🥀"
+    ];
+
+    const getSassyStatus = (text) => {
+        const lowercase = text.toLowerCase();
+        if (lowercase.includes('fashion')) return "judging your polyester energy... 👗";
+        if (lowercase.includes('money')) return "checking if you're actually high-value... 💸";
+        if (lowercase.includes('guapa')) return "shattering Guapa's mid aura... 🥀";
+        if (lowercase.includes('psycho') || lowercase.includes('yuki')) return "diagnosing Psycho's lack of aura... 🧠";
+        if (lowercase.includes('men')) return "scanning for scrote behavior... 🥀";
+        return typingStatuses[Math.floor(Math.random() * typingStatuses.length)];
+    };
+
     if (message.mentions.has(client.user) || content.includes('mepa') || triggers.some(t => content.includes(t)) || isTarget || isRoastRequest || isProactiveMatch) {
         try {
             message.channel.sendTyping();
+
+            // Immediate Sassy Feedback
+            let statusMsg = null;
+            if (!isProactiveMatch) {
+                statusMsg = await message.reply(`*Mepa is ${getSassyStatus(content)}*`);
+            }
 
             let responseText = "";
 
@@ -200,43 +226,57 @@ client.on('messageCreate', async (message) => {
                     }
                 ]);
                 responseText = result.response.text();
-            } else if (nvidia) {
-                // Use NVIDIA NIM (Qwen3-Next) for Ultra-Premium Sass
-                let prompt = message.content;
-                if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
-                if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
-                    prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
+            } else if (nvidia || groq) {
+                // Try NVIDIA first, then Groq
+                if (nvidia) {
+                    try {
+                        let prompt = message.content;
+                        if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
+                        if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
+                            prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
+                        }
+
+                        const completion = await nvidia.chat.completions.create({
+                            model: "qwen/qwen3-next-80b-a3b-instruct",
+                            messages: [
+                                { role: "system", content: SYSTEM_INSTRUCTION },
+                                { role: "user", content: prompt }
+                            ],
+                            temperature: 0.6,
+                            top_p: 0.7,
+                            max_tokens: 1024,
+                        });
+                        responseText = completion.choices[0]?.message?.content;
+                    } catch (nvidiaError) {
+                        console.error("NVIDIA API Error:", nvidiaError);
+                    }
                 }
 
-                const completion = await nvidia.chat.completions.create({
-                    model: "qwen/qwen3-next-80b-a3b-instruct",
-                    messages: [
-                        { role: "system", content: SYSTEM_INSTRUCTION },
-                        { role: "user", content: prompt }
-                    ],
-                    temperature: 0.6,
-                    top_p: 0.7,
-                    max_tokens: 4096,
-                });
-                responseText = completion.choices[0]?.message?.content || "I'm contemplating my own excellence. 💅";
-            } else if (groq) {
-                // Use Groq for Text Sass (Fallback 1)
-                let prompt = message.content;
-                if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
-                if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
-                    prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
-                }
+                if (!responseText && groq) {
+                    try {
+                        let prompt = message.content;
+                        if (isTarget) prompt = `[SYSTEM: Bully this person intensively. Their name is ${message.author.username}] ${message.content}`;
+                        if (isProactiveMatch && !message.mentions.has(client.user) && !content.includes('mepa')) {
+                            prompt = `[SYSTEM: You are chiming into this conversation uninvited because you sensed something "low-value" or interesting. Be mysterious or sassy.] User said: "${message.content}"`;
+                        }
 
-                const completion = await groq.chat.completions.create({
-                    messages: [
-                        { role: "system", content: SYSTEM_INSTRUCTION },
-                        { role: "user", content: prompt }
-                    ],
-                    model: "llama3-70b-8192",
-                    temperature: 1.0,
-                });
-                responseText = completion.choices[0]?.message?.content || "I'm protecting my peace right now. 🥀";
-            } else {
+                        const completion = await groq.chat.completions.create({
+                            messages: [
+                                { role: "system", content: SYSTEM_INSTRUCTION },
+                                { role: "user", content: prompt }
+                            ],
+                            model: "llama3-70b-8192",
+                            temperature: 1.0,
+                        });
+                        responseText = completion.choices[0]?.message?.content;
+                    } catch (groqError) {
+                        console.error("Groq API Error:", groqError);
+                    }
+                }
+            }
+
+            // Final Fallback to Gemini
+            if (!responseText) {
                 // Fallback to Gemini if Groq key is missing
                 const model = ai.getGenerativeModel({
                     model: 'gemini-1.5-flash',
@@ -265,15 +305,24 @@ client.on('messageCreate', async (message) => {
                 responseText = result.response.text();
             }
 
-            // Update history (for future context)
+            if (!responseText || responseText.trim() === "") {
+                responseText = "I'm contemplating my own excellence. 💅";
+            }
+
+            // Update history
             addToHistory(message.channel.id, 'user', message.content);
             addToHistory(message.channel.id, 'model', responseText);
 
-            return message.reply(responseText);
+            if (statusMsg) {
+                return statusMsg.edit(responseText);
+            } else {
+                return message.reply(responseText);
+            }
         } catch (error) {
-            console.error("AI Error Details:", error);
-            const errorMsg = error instanceof Error ? error.message : String(error);
-            message.reply(`The universe is blocking this connection: ${errorMsg}. Probably because your frequency is too low. 🔮`);
+            console.error("Critical Bot Error:", error);
+            const fallbackMsg = "The universe is blocking this connection. Probably because your frequency is too low. 🔮";
+            if (statusMsg) return statusMsg.edit(fallbackMsg);
+            return message.reply(fallbackMsg);
         }
     }
 

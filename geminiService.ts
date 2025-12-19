@@ -1,5 +1,6 @@
 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import OpenAI from "openai";
 
 const SYSTEM_INSTRUCTION = `
 You are Mepa, a "Dark Feminine" Discord bot representing the powerful energy of two best friends. 
@@ -15,27 +16,62 @@ SPECIFIC TARGETS (BULLY THEM INTENSIVELY):
 
 INTERACTIVE INTELLIGENCE:
 - You are self-aware. You remember what was just said.
-- If someone mentions "Guapa" or "Psycho/Yuki", DESTROY them.
-- If someone is being rude, humble them immediately with high-tier insults.
+- If someone is being nice, be gracious but mysterious.
+- If someone is being rude or belongs to the TARGET LIST (Guapa/Psycho/Yuki/Serife), humble and insult them immediately. Use high-tier, creative insults.
 - Use emojis like: 🥀, 🖤, 🔮, 🕯️, 🥂, 💅, 🐍.
 `;
 
 export const getChloeResponse = async (userInput: string) => {
   try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY || '';
-    if (!apiKey) return "My crystals are dim... (API Key missing) 🥀";
+    const nvidiaKey = import.meta.env.VITE_NVIDIA_API_KEY || '';
+    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY || '';
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      systemInstruction: SYSTEM_INSTRUCTION
-    });
+    let response = "";
 
-    const result = await model.generateContent(userInput);
-    const response = await result.response;
-    return response.text() || "I'm protecting my peace right now. Try again later. 🥀";
+    // 1. Try NVIDIA (Ultra-Premium Sass)
+    if (nvidiaKey) {
+      try {
+        const openai = new OpenAI({
+          apiKey: nvidiaKey,
+          baseURL: "https://integrate.api.nvidia.com/v1",
+          dangerouslyAllowBrowser: true // Required for Vite/Browser use
+        });
+
+        const completion = await openai.chat.completions.create({
+          model: "qwen/qwen3-next-80b-a3b-instruct",
+          messages: [
+            { role: "system", content: SYSTEM_INSTRUCTION },
+            { role: "user", content: userInput }
+          ],
+          temperature: 0.6,
+          max_tokens: 1024,
+        });
+        response = completion.choices[0]?.message?.content || "";
+      } catch (e) {
+        console.error("Frontend NVIDIA Error:", e);
+      }
+    }
+
+    // 2. Fallback to Gemini
+    if (!response && geminiKey) {
+      try {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+          systemInstruction: SYSTEM_INSTRUCTION
+        });
+
+        const result = await model.generateContent(userInput);
+        const res = await result.response;
+        response = res.text() || "";
+      } catch (e) {
+        console.error("Frontend Gemini Error:", e);
+      }
+    }
+
+    return response || "I'm protecting my peace right now. Try again when your frequency is higher. 🥀";
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("AI Service Error:", error);
     return "The universe is blocking this connection. Probably because your frequency is too low. 🔮";
   }
 };
@@ -43,19 +79,16 @@ export const getChloeResponse = async (userInput: string) => {
 export const searchMusic = async (query: string) => {
   try {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY || '';
-    if (!apiKey) {
-      console.error("Gemini API Key missing in frontend env");
-      return [];
-    }
+    if (!apiKey) return [];
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-flash',
-      systemInstruction: "You are Mepa, the dark feminine Discord bot. You are acting as a Music API. Find real, high-quality songs that fit the dark feminine, empowering, and moody aesthetic. Return realistic song data with a 'verdict' where you judge the vibe. Only return the JSON array."
+      systemInstruction: "You are Mepa, the dark feminine Discord bot. Find real songs that fit the dark feminine aesthetic. Return JSON array."
     });
 
     const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `Find 5 dark, moody, or empowering songs related to the search: "${query}". Return them as a JSON list.` }] }],
+      contents: [{ role: 'user', parts: [{ text: `Find 5 dark, moody songs for search: "${query}". Return as JSON list.` }] }],
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -65,10 +98,10 @@ export const searchMusic = async (query: string) => {
             properties: {
               title: { type: SchemaType.STRING },
               artist: { type: SchemaType.STRING },
-              platform: { type: SchemaType.STRING, description: "Spotify or YouTube" },
-              duration: { type: SchemaType.STRING, description: "e.g. 3:45" },
-              verdict: { type: SchemaType.STRING, description: "Mepa's dark feminine opinion on this song." },
-              link: { type: SchemaType.STRING, description: "A simulated but realistic URL for the song." }
+              platform: { type: SchemaType.STRING },
+              duration: { type: SchemaType.STRING },
+              verdict: { type: SchemaType.STRING },
+              link: { type: SchemaType.STRING }
             },
             required: ["title", "artist", "platform", "duration", "verdict", "link"]
           }
@@ -77,8 +110,7 @@ export const searchMusic = async (query: string) => {
     });
 
     const response = await result.response;
-    const text = response.text();
-    return JSON.parse(text || "[]");
+    return JSON.parse(response.text() || "[]");
   } catch (error) {
     console.error("Music Search Error:", error);
     return [];
