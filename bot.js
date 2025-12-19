@@ -75,6 +75,19 @@ const distube = new DisTube(client, {
     ],
     emitNewSongOnly: true,
     emitAddSongWhenCreatingQueue: false,
+    leaveOnEmpty: true,
+    leaveOnFinish: false,
+    nsig: true // Fix for some YouTube restricted videos
+});
+
+// Advanced Debug Logs for Music
+distube.on('initQueue', (queue) => {
+    console.log(`[MUSIC] Queue initialized in ${queue.textChannel.guild.name}`);
+});
+
+distube.on('searchNoResult', (message, query) => {
+    console.log(`[MUSIC] No results for: ${query}`);
+    message.reply(`I couldn't find anything for "${query}". Your taste is so obscure it doesn't even exist. 🙄`);
 });
 
 // DisTube Events for sass
@@ -485,14 +498,16 @@ client.on('messageCreate', async (message) => {
         if (!query) return message.reply("What am I playing? Silence? Give me a song.");
 
         try {
+            console.log(`[MUSIC] Attempting to play: ${query} for ${message.author.username}`);
             await distube.play(voiceChannel, query, {
                 message,
                 textChannel: message.channel,
                 member: message.member,
             });
+            console.log(`[MUSIC] Search/play triggered successfully.`);
         } catch (e) {
-            console.error(e);
-            message.reply("Something went wrong with the speakers. It's likely your fault. 🙄");
+            console.error("[MUSIC ERROR]", e);
+            message.reply(`The speakers are bleeding: ${e.message.slice(0, 100)}. Probably your low-quality taste. 🙄`);
         }
     }
 
