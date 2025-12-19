@@ -79,15 +79,20 @@ const distube = new DisTube(client, {
 
 // DisTube Events for sass
 distube.on('playSong', (queue, song) => {
-    queue.textChannel.send(`Playing **${song.name}** - ${song.formattedDuration}. It better be good. 💅`);
+    queue.textChannel.send(`Playing **${song.name}** - ${song.formattedDuration}. Listen and learn. 🥀`);
 });
 
 distube.on('addSong', (queue, song) => {
-    queue.textChannel.send(`Added **${song.name}** to the queue. Moving up in the world. ✨`);
+    queue.textChannel.send(`Added **${song.name}** to my rotation. Try to keep up. ✨`);
 });
 
 distube.on('addList', (queue, playlist) => {
     queue.textChannel.send(`Added the **${playlist.name}** playlist (${playlist.songs.length} tracks). A proper elite rotation. 🥂`);
+});
+
+distube.on('error', (channel, error) => {
+    console.error("DisTube Error:", error);
+    if (channel) channel.send(`The speakers are bleeding: ${error.message.slice(0, 100)}. Probably your low-quality taste. 🙄`);
 });
 
 // --- CONVERSATION MEMORY ---
@@ -122,6 +127,7 @@ RULES OF ENGAGEMENT:
 - Use elite, high-end vocabulary. Don't just be mean; be sophisticatedly devastating.
 - Use emojis precisely: 🥀, 🖤, 🔮, 🕯️, 🥂, 💅, 🐍.
 - BE CONCISE: Maximum 3 lines. Every word must sting or command respect.
+- DIRECT POV: Use "I" and "Me". Never refer to yourself as "Mepa" or in the third person. Address users directly.
 - NEVER break character. You are the queen of this circle.
 `;
 
@@ -171,9 +177,9 @@ client.on('messageCreate', async (message) => {
 
     const typingStatuses = [
         "judging your aura (it's mid)... 🥀",
-        "preparing a reality check... 🔮",
-        "charging crytals to block you... 🕯️",
-        "rolling her eyes... 💅",
+        "preparing a reality check for you... 🔮",
+        "charging my crystals to block you... 🕯️",
+        "rolling my eyes at this... 💅",
         "reading your low-frequency vibes... 🐍",
         "not impressed. At all. 🥂",
         "sensing extreme basicness... 🥀"
