@@ -9,6 +9,14 @@ import { SpotifyPlugin } from '@distube/spotify';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
+// Global Error Handlers to prevent silent crashes on Render
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
 // Load environment variables
 dotenv.config();
 console.log("🔮 Checking Environment Variables...");
@@ -168,10 +176,10 @@ client.on('messageCreate', async (message) => {
     const content = message.content.toLowerCase();
     const triggers = ['love', 'breakup', 'boyfriend', 'fashion', 'money', 'hustle', 'men', 'dating'];
 
-    // --- COMMANDS FIRST ---
+    // --- COMMANDS FIRST (Case-Insensitive) ---
 
     // .play <query>
-    if (message.content.startsWith('.play')) {
+    if (content.startsWith('.play')) {
         const query = message.content.replace('.play', '').trim();
         const voiceChannel = message.member?.voice.channel;
 
@@ -179,7 +187,14 @@ client.on('messageCreate', async (message) => {
         if (!query) return message.reply("What am I playing? Silence? Give me a song.");
 
         try {
-            console.log(`[MUSIC] [Session: ${botSessionId}] Attempting to play: ${query} for ${message.author.username}`);
+            console.log(`[MUSIC] [Session: ${botSessionId}] Request: "${query}" from ${message.author.username}`);
+
+            // Pre-join checks
+            const permissions = voiceChannel.permissionsFor(client.user);
+            if (!permissions.has(PermissionsBitField.Flags.Connect) || !permissions.has(PermissionsBitField.Flags.Speak)) {
+                return message.reply("I don't have the clearance to enter or speak in that channel. Fix your permissions. 💅");
+            }
+
             // Check if it's a playlist link
             const isPlaylist = query.includes('list=') || query.includes('/playlist');
 
@@ -187,24 +202,26 @@ client.on('messageCreate', async (message) => {
                 message,
                 textChannel: message.channel,
                 member: message.member,
-                selfDeafen: false // User asked why it was deafened
+                selfDeafen: false
             });
-            console.log(`[MUSIC] Play request submitted. Playlist: ${isPlaylist}`);
-            return; // Stop here
+            console.log(`[MUSIC] Play request sent. Playlist: ${isPlaylist}`);
+            return;
         } catch (e) {
             console.error("[MUSIC ERROR]", e);
-            return message.reply(`The speakers are bleeding: ${e.message.slice(0, 100)}. Probably your low-quality taste. 🙄`);
+            let errorMsg = `The speakers are bleeding: ${e.message.slice(0, 100)}.`;
+            if (e.message.includes('VOICE_JOIN_CHANNEL')) errorMsg = "I'm having trouble connecting to your frequency. Try joining another VC? 🥀";
+            return message.reply(`${errorMsg} Probably your low-quality taste. 🙄`);
         }
     }
 
     // .stop
-    if (message.content.startsWith('.stop')) {
+    if (content.startsWith('.stop')) {
         distube.stop(message);
         return message.channel.send("Music stopped. Finally, some peace. 🕯️");
     }
 
     // .skip
-    if (message.content.startsWith('.skip')) {
+    if (content.startsWith('.skip')) {
         try {
             await distube.skip(message);
             return message.channel.send("Next. That one was getting boring anyway. ⛓️");
@@ -214,7 +231,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .volume <1-100>
-    if (message.content.startsWith('.volume')) {
+    if (content.startsWith('.volume')) {
         const volume = parseInt(message.content.split(' ')[1]);
         if (isNaN(volume) || volume < 1 || volume > 100) return message.reply("Volume must be 1-100. Don't be difficult.");
         distube.setVolume(message, volume);
@@ -222,7 +239,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .shuffle
-    if (message.content.startsWith('.shuffle')) {
+    if (content.startsWith('.shuffle')) {
         try {
             await distube.shuffle(message);
             return message.channel.send("Queue shuffled. Let's see what the universe has planned. 🔮");
@@ -232,7 +249,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .recommend <mood/genre> (Music)
-    if (message.content.startsWith('.recommend')) {
+    if (content.startsWith('.recommend')) {
         const query = message.content.replace('.recommend', '').trim();
         if (!query) return message.reply("Tell me the vibe. e.g., `.recommend dark feminine rap`");
 
@@ -255,7 +272,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .help
-    if (message.content.startsWith('.help')) {
+    if (content.startsWith('.help')) {
         const embed = new EmbedBuilder()
             .setColor('#D4AF37')
             .setTitle('🔮 My Grimoire: Commands & Secrets')
@@ -274,7 +291,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .vibecheck @user
-    if (message.content.startsWith('.vibecheck')) {
+    if (content.startsWith('.vibecheck')) {
         const target = message.mentions.members.first() || message.member;
         const verdicts = [
             "Your aura is giving 'clearance rack'. Mid at best. 💅",
@@ -289,7 +306,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .clear / .sanitize
-    if (message.content.startsWith('.clear') || message.content.startsWith('.sanitize')) {
+    if (content.startsWith('.clear') || content.startsWith('.sanitize')) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("You don't have the aura to delete messages. Sit down. 💅");
         const args = message.content.split(' ');
         const amount = parseInt(args[1]) || 10;
@@ -302,7 +319,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .mute @user [reason] (Modern Timeout)
-    if (message.content.startsWith('.mute')) {
+    if (content.startsWith('.mute')) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("You're not powerful enough to silence people. 💅");
         const member = message.mentions.members.first();
         if (!member) return message.reply("Who are we silencing? Tag them.");
@@ -318,7 +335,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .kick @user
-    if (message.content.startsWith('.kick')) {
+    if (content.startsWith('.kick')) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers)) return message.reply("Nice try, but you're not an admin. 💅");
         const memberToKick = message.mentions.members.first();
         if (!memberToKick) return message.reply("Who are we kicking? Tag them.");
@@ -330,7 +347,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .ban @user
-    if (message.content.startsWith('.ban')) {
+    if (content.startsWith('.ban')) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("You can't ban people. That's *my* job (and admins).");
         const memberToBan = message.mentions.members.first();
         if (!memberToBan) return message.reply("Tag the dusty you want to ban.");
@@ -341,7 +358,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .softban @user
-    if (message.content.startsWith('.softban')) {
+    if (content.startsWith('.softban')) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("Softbanning is reserved for those with authority. 💅");
         const member = message.mentions.members.first();
         if (!member) return message.reply("Tag the person you want to softban.");
@@ -364,7 +381,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .role @role :emoji: (Setup Reaction Role)
-    if (message.content.startsWith('.role')) {
+    if (content.startsWith('.role')) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) return message.reply("You can't manage roles. Sit down. 💅");
         const role = message.mentions.roles.first();
         const emoji = message.content.split(' ').pop();
@@ -385,7 +402,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .roles (List active roles)
-    if (message.content.startsWith('.roles')) {
+    if (content.startsWith('.roles')) {
         const { data, error } = await supabase.from('reaction_roles').select('*');
         if (error) return message.reply("Could not fetch the elite roster. 🙄");
 
@@ -409,7 +426,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // .delrole <messageId>
-    if (message.content.startsWith('.delrole')) {
+    if (content.startsWith('.delrole')) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) return message.reply("You don't have the clearance. 💅");
         const msgId = message.content.split(' ')[1];
         if (!msgId) return message.reply("Which setup are we removing? Give me the Message ID.");
@@ -439,7 +456,26 @@ client.on('messageCreate', async (message) => {
     // Improved Trigger Logic: Prevents overlaps
     const isDirectCall = message.mentions.has(client.user) || content.includes('mepa');
     const isKeywordTrigger = triggers.some(t => content.includes(t)) || isTarget || isRoastRequest;
-    const isProactiveMatch = !isDirectCall && !isKeywordTrigger && Math.random() < 0.05;
+    const isMusicIntent = isDirectCall && (content.includes('play') || content.includes('music') || content.includes('song'));
+    const isProactiveMatch = !isDirectCall && !isKeywordTrigger && !isMusicIntent && Math.random() < 0.05;
+
+    // --- HYBRID BRIDGE: Handle Mepa, play... ---
+    if (isMusicIntent && !content.startsWith('.')) {
+        const query = content.replace('mepa', '').replace('play', '').replace('music', '').replace('song', '').trim();
+        if (query) {
+            const voiceChannel = message.member?.voice.channel;
+            if (voiceChannel) {
+                console.log(`[HYBRID] Music intent detected: ${query}`);
+                distube.play(voiceChannel, query, {
+                    message,
+                    textChannel: message.channel,
+                    member: message.member,
+                    selfDeafen: false
+                }).catch(e => console.error("[HYBRID MUSIC ERROR]", e));
+                // Don't return yet, let her roast the user too!
+            }
+        }
+    }
 
     const typingStatuses = [
         "judging your aura (it's mid)... 🥀",
@@ -453,6 +489,7 @@ client.on('messageCreate', async (message) => {
 
     const getSassyStatus = (text) => {
         const lowercase = text.toLowerCase();
+        if (isMusicIntent) return "tuning the speakers for your low-quality request... 🎧";
         if (lowercase.includes('fashion')) return "judging your polyester energy... 👗";
         if (lowercase.includes('money')) return "checking if you're actually high-value... 💸";
         if (lowercase.includes('guapa')) return "shattering Guapa's mid aura... 🥀";
