@@ -4,7 +4,7 @@ import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { DisTube } from 'distube';
-import { YouTubePlugin } from '@distube/youtube';
+import { YtDlpPlugin } from '@distube/yt-dlp';
 import { SpotifyPlugin } from '@distube/spotify';
 import axios from 'axios';
 import dotenv from 'dotenv';
@@ -70,12 +70,8 @@ const nvidia = process.env.NVIDIA_API_KEY ? new OpenAI({
 // Initialize DisTube
 const distube = new DisTube(client, {
     plugins: [
-        new YouTubePlugin({
-            ytdlOptions: {
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25,
-                filter: 'audioonly',
-            }
+        new YtDlpPlugin({
+            update: true
         }),
         new SpotifyPlugin()
     ],
@@ -143,8 +139,8 @@ RULES OF ENGAGEMENT:
 - Use elite, high-end vocabulary. Don't just be mean; be sophisticatedly devastating.
 - Use emojis precisely: 🥀, 🖤, 🔮, 🕯️, 🥂, 💅, 🐍.
 - BE CONCISE: Maximum 3 lines. Every word must sting or command respect.
-- DIRECT POV: Use "I" and "Me". Never refer to yourself as "Mepa" or in the third person. Address users directly.
-- NEVER break character. You are the queen of this circle.
+- DIRECT POV (MANDATORY): Use "I", "Me", "My". NEVER refer to yourself as "Mepa" or speak in the third person. Address the user directly as a queen speaking to her subjects or allies.
+- NEVER break character. You are the sovereign of this circle.
 `;
 
 const botSessionId = Math.random().toString(36).substring(7);
