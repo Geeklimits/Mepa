@@ -9,7 +9,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 
 // Load environment variables
-dotenv.config({ path: '.env.local' });
+dotenv.config(); // Look for .env or use system vars
 
 // --- CONFIGURATION ---
 // --- CONFIGURATION ---
@@ -50,7 +50,11 @@ const client = new Client({
 });
 
 // Initialize AI
-const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.API_KEY || '');
+const geminiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+if (geminiKey && !geminiKey.startsWith('AIza')) {
+    console.warn("⚠️ Warning: GEMINI_API_KEY does not start with 'AIza'. It might be invalid.");
+}
+const ai = new GoogleGenerativeAI(geminiKey);
 const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 
 // Initialize DisTube
@@ -436,14 +440,11 @@ client.on('messageCreate', async (message) => {
         const query = message.content.replace('.recommend', '').trim();
         if (!query) return message.reply("Tell me the vibe. e.g., `.recommend dark feminine rap`");
 
-        // Use Gemini to generate JSON
         try {
             message.channel.sendTyping();
-            const response = await ai.models.generateContent({
-                model: 'gemini-1.5-flash',
-                contents: `Generate a JSON list of 3 songs matching vibe "${query}". Format: [{"title": "Song", "artist": "Artist", "reason": "Why Mepa likes it"}]. Return ONLY JSON.`,
-            });
-            const text = response.text().replace(/```json|```/g, '').trim();
+            const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const response = await model.generateContent(`Generate a JSON list of 3 songs matching vibe "${query}". Format: [{"title": "Song", "artist": "Artist", "reason": "Why Mepa likes it"}]. Return ONLY JSON.`);
+            const text = response.response.text().replace(/```json|```/g, '').trim();
             const songs = JSON.parse(text);
 
             let replyText = `**Mepa's Curated Vibe for "${query}"** 🎧\n`;
@@ -455,6 +456,50 @@ client.on('messageCreate', async (message) => {
             console.error(e);
             message.reply("My Spotify is lagging. Look it up yourself. 🙄");
         }
+    }
+
+    // .help
+    if (message.content.startsWith('.help')) {
+        const embed = new EmbedBuilder()
+            .setColor('#D4AF37')
+            .setTitle('🔮 Mepa\'s Grimoire: Commands & Secrets')
+            .setDescription('I only respond to those with high standards. Use these wisely.')
+            .addFields(
+                { name: '🎵 Music', value: '`.play <song>`, `.stop`, `.skip`, `.volume <1-100>`, `.shuffle`, `.recommend <vibe>`', inline: false },
+                { name: '💅 Personality', value: 'Mention `mepa` or keywords (`money`, `fashion`, `love`). Ask for a roast: `roast my pfp`.', inline: false },
+                { name: '🛡️ Moderation', value: '`.clear <amt>`, `.mute @user`, `.warn @user`, `.kick @user`, `.ban @user`', inline: false },
+                { name: '🎭 Roles', value: '`.role @Role :emoji:`, `.roles`, `.delrole <msgId>`', inline: true },
+                { name: '⚙️ System', value: '`.help`, `.testwelcome`', inline: true }
+            )
+            .setFooter({ text: 'Mepa | High Standards Only', iconURL: client.user.displayAvatarURL() })
+            .setTimestamp();
+
+        message.channel.send({ embeds: [embed] });
+    }
+
+    // .vibecheck @user
+    if (message.content.startsWith('.vibecheck')) {
+        const target = message.mentions.members.first() || message.member;
+        const verdicts = [
+            "Your aura is giving 'clearance rack'. Mid at best. 💅",
+            "High frequency detected. You might actually be worth my time. ✨",
+            "Extremely low vibrations. I'm sensing a dusty energy. 🥀",
+            "Divine Feminine energy is strong here. A queen. 👑",
+            "The basicness is off the charts. Sit down. 🙄",
+            "Siren vibes. You have the power, don't waste it on scrotes. 🐍",
+            "Your energy is vibrating at a 'low value' frequency. Crystal cleanse required. 🔮",
+            "Unbothered and high-value. We love to see it. 🥂"
+        ];
+        const randomVerdict = verdicts[Math.floor(Math.random() * verdicts.length)];
+
+        const embed = new EmbedBuilder()
+            .setColor('#D4AF37')
+            .setTitle(`🔮 Vibe Check: ${target.user.username}`)
+            .setDescription(randomVerdict)
+            .setThumbnail(target.user.displayAvatarURL({ dynamic: true }))
+            .setTimestamp();
+
+        message.channel.send({ embeds: [embed] });
     }
 
     // Test Welcome Command
@@ -480,7 +525,7 @@ client.on('guildMemberAdd', async (member) => {
         .setImage('https://i.imgur.com/7u537kF.png')
         .addFields(
             { name: '📅 Member Since', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
-            { name: '💅 Vibe Check', value: 'Pending...', inline: true }
+            { name: '💅 Vibe Check', value: 'Giving mid...', inline: true }
         )
         .setFooter({ text: 'Mepa | High Standards Only', iconURL: client.user.displayAvatarURL() })
         .setTimestamp();
