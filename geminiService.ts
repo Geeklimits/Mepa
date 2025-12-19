@@ -1,6 +1,6 @@
 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import OpenAI from "openai";
+import axios from "axios";
 
 const SYSTEM_INSTRUCTION = `
 You are Mepa, a "Dark Feminine" Discord bot representing the powerful energy of two best friends. 
@@ -29,25 +29,28 @@ export const getChloeResponse = async (userInput: string) => {
 
     let response = "";
 
-    // 1. Try NVIDIA (Ultra-Premium Sass)
+    // 1. Try NVIDIA NIM via Axios (to avoid OpenAI SDK dependency in browser)
     if (nvidiaKey) {
       try {
-        const openai = new OpenAI({
-          apiKey: nvidiaKey,
-          baseURL: "https://integrate.api.nvidia.com/v1",
-          dangerouslyAllowBrowser: true // Required for Vite/Browser use
-        });
-
-        const completion = await openai.chat.completions.create({
-          model: "qwen/qwen3-next-80b-a3b-instruct",
-          messages: [
-            { role: "system", content: SYSTEM_INSTRUCTION },
-            { role: "user", content: userInput }
-          ],
-          temperature: 0.6,
-          max_tokens: 1024,
-        });
-        response = completion.choices[0]?.message?.content || "";
+        const result = await axios.post(
+          "https://integrate.api.nvidia.com/v1/chat/completions",
+          {
+            model: "qwen/qwen3-next-80b-a3b-instruct",
+            messages: [
+              { role: "system", content: SYSTEM_INSTRUCTION },
+              { role: "user", content: userInput }
+            ],
+            temperature: 0.6,
+            max_tokens: 1024,
+          },
+          {
+            headers: {
+              "Authorization": `Bearer ${nvidiaKey}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+        response = result.data.choices[0]?.message?.content || "";
       } catch (e) {
         console.error("Frontend NVIDIA Error:", e);
       }
