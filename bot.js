@@ -202,15 +202,20 @@ client.on('messageCreate', async (message) => {
                 message,
                 textChannel: message.channel,
                 member: message.member,
-                selfDeafen: false
+                selfDeafen: false,
+                joinConfig: {
+                    timeout: 60000,
+                }
             });
-            console.log(`[MUSIC] Play request sent. Playlist: ${isPlaylist}`);
+            console.log(`[MUSIC] Play request sent (60s timeout). Playlist: ${isPlaylist}`);
             return;
         } catch (e) {
             console.error("[MUSIC ERROR]", e);
             let errorMsg = `The speakers are bleeding: ${e.message.slice(0, 100)}.`;
-            if (e.message.includes('VOICE_JOIN_CHANNEL')) errorMsg = "I'm having trouble connecting to your frequency. Try joining another VC? 🥀";
-            return message.reply(`${errorMsg} Probably your low-quality taste. 🙄`);
+            if (e.message.includes('VOICE_JOIN_CHANNEL') || e.message.includes('timeout')) {
+                errorMsg = "The connection is struggling. I'm trying to push through, but the frequency is low. Try again or change the VC region? 🥀";
+            }
+            return message.reply(`${errorMsg} 🙄`);
         }
     }
 
