@@ -81,9 +81,6 @@ const distube = new DisTube(client, {
     ],
     emitNewSongOnly: true,
     emitAddSongWhenCreatingQueue: false,
-    leaveOnEmpty: true,
-    leaveOnFinish: false,
-    nsig: true
 });
 
 // Advanced Debug Logs for Music
