@@ -20,13 +20,13 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
   const navItems = [
-    { id: BotTab.DASHBOARD, label: 'Overview', icon: '✨' },
+    { id: BotTab.DASHBOARD, label: 'Dashboard', icon: '✨' },
     { id: BotTab.MODERATION, label: 'Moderation', icon: '🛡️' },
     { id: BotTab.WELCOME, label: 'Welcome', icon: '🎀' },
     { id: BotTab.MUSIC, label: 'Music Player', icon: '🎵' },
     { id: BotTab.ROLES, label: 'Reaction Roles', icon: '🎭' },
     { id: BotTab.PERSONALITY, label: 'Chat Mepa', icon: '🔮' },
-    { id: BotTab.INTEGRATION, label: 'Bot Code', icon: '💻' },
+    { id: BotTab.INTEGRATION, label: 'Bot Settings', icon: '⚙️' },
   ];
 
   return (

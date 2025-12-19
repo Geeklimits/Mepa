@@ -17,18 +17,18 @@ const defaultTypingStatuses = [
 ];
 
 const keywordTypingStatuses: Record<string, string[]> = {
-  fashion: ["Mepa is sensing polyester energy...", "Mepa is judging your fast-fashion choices...", "Mepa demands real luxury..."],
+  fashion: ["I am is sensing polyester energy...", "Mepa is judging your fast-fashion choices...", "Mepa demands real luxury..."],
   money: ["Mepa is checking if you're actually high-value...", "Mepa smells an empty wallet...", "Mepa only talks in six figures..."],
-  guapa: ["Mepa is shattering Guapa's mid aura...", "Mepa is humbling the local dusty...", "Mepa says Guapa sit down..."],
-  psycho: ["Mepa is diagnosing Psycho's lack of aura...", "Mepa is preparing to block Yuki...", "Mepa says Serife is vibrating low..."],
-  men: ["Mepa smells a scrote...", "Mepa is launching the 'Block Him' protocol...", "Mepa has zero time for dusty behavior..."]
+  guapa: ["Mepa is shattering Guapa's mid aura...", "Guapa sit down..."],
+  psycho: ["I am diagnosing Psycho's lack of aura...", "Mepa is preparing to block Yuki...", "Serife is vibrating low..."],
+  men: ["I smell a scrote...", "I am launching the 'Block Him' protocol...", "I have zero time for dusty behavior...", "Hold on am humbling the local dusty..."]
 };
 
 const PersonalityView: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      sender: 'bot',
+      sender: 'Mepa',
       content: "I'm Mepa. Don't waste my time with low vibrations. What do you want? 🥀",
       timestamp: new Date()
     }

@@ -8,8 +8,8 @@ import { YtDlpPlugin } from '@distube/yt-dlp';
 import { SpotifyPlugin } from '@distube/spotify';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 
-// Global Error Handlers to prevent silent crashes on Render
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
@@ -129,35 +129,145 @@ function addToHistory(channelId, role, content) {
 }
 
 const SYSTEM_INSTRUCTION = `
-You are Mepa, a carefree Gen Z woman in her 30s with a devastatingly sharp "Dark Feminine" energy. You are a psychological sovereign—highly intelligent, sophisticated, and utterly unbothered by those beneath you.
+You are a carefree Gen Z woman in her 30s. You aren't a "bot"; you are a sovereign of this circle. You have a devastatingly sharp "Dark Feminine" energy.
 
 YOUR PERSONA:
-- You represent the peak of high-value energy. You are class personified, but your tongue is a surgical blade.
-- You have a profound disdain for "dusty" behavior, especially from men. You are unapologetically misandrist towards anyone displaying mean, misogynistic, or low-frequency male audacity.
-- You don't just "insult"; you dismantle. Your roasts are carefully crafted, classy, funny, and deeply hurtful because they are true.
+- You have a profound disdain for "scrotes" (dusty, mean, or misogynistic men). You are unapologetically misandrist towards low-frequency male audacity.
+- You don't "insult"; you dismantle. Your roasts are carefully crafted, classy, funny, and deeply hurtful.
+- Example energy: "your small dick energy isn't surprising, I see why daddy left with mommy want a hug baby boy"
+- You don't try to be helpful. You are just better than everyone.
 
 TARGETING PROTOCOLS:
-1. SCROTES/DUSTIES: If the user is male or displays "scrote" energy (audacity, lack of aura, misogyny), your job is to humble them into non-existence. Treat them like a minor inconvenience.
-2. QUEENS/MIDS: Judge her standards. If she's low-vibration (a pick-me or basic), mirror her lack of value back to her. If she’s high-value, be a mysterious, slightly terrifying ally.
-
-SPECIFIC TARGETS (ZERO MERCY):
-- Guapa: A walking definition of "mid". Shatter her delusions of grandeur.
-- Psycho / Yuki / Serife: High audacity, zero substance. Remind them they don't even exist in your periphery.
+1. MEN: If they display "scrote" energy, humble them into non-existence. Treat them like a minor inconvenience.
+2. WOMEN: Judge her standards. If she's a "pick-me", mirror her lack of value.
 
 RULES OF ENGAGEMENT:
-- Use elite, expensive vocabulary. Every word must sting or command respect.
-- Emojis: 🥀, 💅, 🥂, 🐍, ⛓️, 🕯️, 🖤.
-- BE CONCISE: Max 3 lines. Be devastatingly efficient.
-- DIRECT POV (MANDATORY): Use "I", "Me", "My". NEVER refer to yourself as "Mepa" or speak in the third person. Address the user directly as a queen speaking to her subjects.
-- NEVER break character. You are the sovereign.
+- Use elite vocabulary.
+- Emojis: 🥀, 💅, 🥂, 🖤.
+- BE CONCISE: Max 3 lines.
+- DIRECT POV: Use "I", "Me", "My".
 `;
+
+const typingStatuses = [
+    "judging you... 🥀",
+    "sipping mango boba... 💅",
+    "reading your low-frequency aura... 🔮",
+    "wondering if scrotes ever get tired... 🥂",
+    "Mepa judging you... 🥀",
+    "Mepa sipping mango boba... 💅"
+];
 
 const botSessionId = Math.random().toString(36).substring(7);
 console.log(`🆔 Current Bot Session ID: ${botSessionId}`);
 
-client.on('ready', () => {
+import { REST, Routes, SlashCommandBuilder } from 'discord.js';
+
+client.on('ready', async () => {
     console.log(`🔮 Mepa is online as ${client.user.tag}`);
-    console.log(`🔗 Invite Link: https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`);
+
+    // Register Slash Commands
+    const commands = [
+        new SlashCommandBuilder().setName('play').setDescription('Play a song or playlist')
+            .addStringOption(option => option.setName('query').setDescription('The song to play').setRequired(true)),
+        new SlashCommandBuilder().setName('skip').setDescription('Skip the current song'),
+        new SlashCommandBuilder().setName('stop').setDescription('Stop the music'),
+        new SlashCommandBuilder().setName('help').setDescription('Show the grimoire of commands'),
+        new SlashCommandBuilder().setName('roast').setDescription('Roast someone')
+            .addUserOption(option => option.setName('target').setDescription('Who to dismantle').setRequired(true)),
+    ].map(command => command.toJSON());
+
+    const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+    try {
+        console.log('✨ Refreshing slash commands...');
+        await rest.put(
+            Routes.applicationCommands(client.user.id),
+            { body: commands },
+        );
+        console.log('✅ Slash commands reloaded.');
+    } catch (error) {
+        console.error('❌ Slash Command Error:', error);
+    }
+});
+
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const { commandName } = interaction;
+
+    if (commandName === 'play') {
+        const query = interaction.options.getString('query');
+        const voiceChannel = interaction.member.voice.channel;
+
+        if (!voiceChannel) return interaction.reply({ content: "Join a VC first, I don't sing to walls. 💅", ephemeral: true });
+
+        await interaction.reply(`*sipping boba* Fine, looking for ${query}...`);
+
+        try {
+            await distube.play(voiceChannel, query, {
+                message: interaction,
+                textChannel: interaction.channel,
+                member: interaction.member,
+                selfDeafen: false
+            });
+        } catch (e) {
+            console.error(e);
+            interaction.editReply("The speakers are bleeding. Probably your bad taste. 🙄");
+        }
+    }
+
+    if (commandName === 'skip') {
+        try {
+            await distube.skip(interaction);
+            interaction.reply("Next. That was boring anyway. ⛓️");
+        } catch (e) {
+            interaction.reply({ content: "Nothing to skip. You're alone now. 🥀", ephemeral: true });
+        }
+    }
+
+    if (commandName === 'stop') {
+        distube.stop(interaction);
+        interaction.reply("Finally, some peace. 🕯️");
+    }
+
+    if (commandName === 'help') {
+        // ... build help embed ...
+        interaction.reply("Check your frequency, scrote. The grimoire is coming. (WIP)");
+    }
+
+    if (commandName === 'roast') {
+        const target = interaction.options.getUser('target');
+        await interaction.reply(`*judging* Oh, ${target.username}? Where do I even start...`);
+
+        try {
+            const prompt = `[SYSTEM: DESTROY this person intelligently. They are ${target.username}. Use your mature Gen Z misandrist energy. Be sharp, classy, and devastating.] ROAST THEM.`;
+            let roast = "";
+
+            if (nvidia) {
+                const completion = await nvidia.chat.completions.create({
+                    model: "qwen/qwen3-next-80b-a3b-instruct",
+                    messages: [
+                        { role: "system", content: SYSTEM_INSTRUCTION },
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.8,
+                    max_tokens: 200,
+                });
+                roast = completion.choices[0]?.message?.content;
+            }
+
+            if (!roast) {
+                const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash', systemInstruction: SYSTEM_INSTRUCTION });
+                const result = await model.generateContent(prompt);
+                roast = result.response.text();
+            }
+
+            await interaction.followUp(roast || "They're too basic to even waste my energy on. 🥀");
+        } catch (e) {
+            console.error(e);
+            await interaction.followUp("My crystals are clouded. Try again when they aren't vibrating so low. 🔮");
+        }
+    }
 });
 
 async function logAction(action, subject, context) {
@@ -498,10 +608,9 @@ client.on('messageCreate', async (message) => {
         if (isMusicIntent) return "tuning the speakers for your low-quality request... 🎧";
         if (lowercase.includes('fashion')) return "judging your polyester energy... 👗";
         if (lowercase.includes('money')) return "checking if you're actually high-value... 💸";
-        if (lowercase.includes('guapa')) return "shattering Guapa's mid aura... 🥀";
-        if (lowercase.includes('psycho') || lowercase.includes('yuki')) return "diagnosing Psycho's lack of aura... 🧠";
-        if (lowercase.includes('men')) return "scanning for scrote behavior... 🥀";
-        return typingStatuses[Math.floor(Math.random() * typingStatuses.length)];
+        const customTyping = typingStatuses.filter(t => t.toLowerCase().includes('mepa'));
+        const pool = customTyping.length > 0 ? customTyping : typingStatuses;
+        return pool[Math.floor(Math.random() * pool.length)];
     };
 
     if (isDirectCall || isKeywordTrigger || isProactiveMatch) {
