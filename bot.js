@@ -35,7 +35,7 @@ const PORT = process.env.PORT || 3001;
 // Render Web Services require a port to be bound to pass health checks.
 import http from 'http';
 http.createServer((req, res) => {
-    res.write("Mepa is Online 💅");
+    res.write("I am Online 💅");
     res.end();
 }).listen(PORT, () => console.log(`🌐 Keep-Alive Server listening on port ${PORT}`));
 
@@ -149,12 +149,12 @@ RULES OF ENGAGEMENT:
 `;
 
 const typingStatuses = [
-    "judging you... 🥀",
-    "sipping mango boba... 💅",
-    "reading your low-frequency aura... 🔮",
-    "wondering if scrotes ever get tired... 🥂",
     "Mepa judging you... 🥀",
-    "Mepa sipping mango boba... 💅"
+    "Mepa sipping mango boba... 💅",
+    "Mepa reading your low-frequency aura... 🔮",
+    "Mepa wondering if scrotes ever get tired... 🥂",
+    "Mepa calculating your irrelevance... ⛓️",
+    "Mepa blocking potential dusties... 🕯️"
 ];
 
 const botSessionId = Math.random().toString(36).substring(7);
@@ -620,7 +620,7 @@ client.on('messageCreate', async (message) => {
             // Immediate Sassy Feedback
             let statusMsg = null;
             if (!isProactiveMatch) {
-                statusMsg = await message.reply(`*Mepa is ${getSassyStatus(content)}*`);
+                statusMsg = await message.reply(`*${getSassyStatus(content)}*`);
             }
 
             let responseText = "";

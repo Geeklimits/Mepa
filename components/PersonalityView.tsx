@@ -4,24 +4,25 @@ import { Message } from '../types';
 import { getChloeResponse } from '../geminiService';
 
 const defaultTypingStatuses = [
-  "Mepa is judging your aura (it's mid)...",
-  "Mepa is preparing a reality check...",
-  "Mepa is charging her crystals to block you...",
-  "Mepa is rolling her eyes...",
-  "Mepa is reading your low-frequency vibes...",
-  "Mepa is typing (unbothered, unlike you)...",
-  "Mepa is manifesting your exit...",
-  "Mepa is blocking potential dusties...",
-  "Mepa is not impressed. At all.",
-  "Mepa is sensing extreme basicness..."
+  "Mepa judging your aura (it's mid)...",
+  "Mepa preparing a reality check...",
+  "Mepa charging her crystals to block you...",
+  "Mepa rolling her eyes...",
+  "Mepa reading your low-frequency vibes...",
+  "Mepa typing (unbothered, unlike you)...",
+  "Mepa manifesting your exit...",
+  "Mepa blocking potential dusties...",
+  "Mepa sipping mango boba...",
+  "Mepa not impressed. At all.",
+  "Mepa sensing extreme basicness..."
 ];
 
 const keywordTypingStatuses: Record<string, string[]> = {
-  fashion: ["I am is sensing polyester energy...", "Mepa is judging your fast-fashion choices...", "Mepa demands real luxury..."],
-  money: ["Mepa is checking if you're actually high-value...", "Mepa smells an empty wallet...", "Mepa only talks in six figures..."],
-  guapa: ["Mepa is shattering Guapa's mid aura...", "Guapa sit down..."],
-  psycho: ["I am diagnosing Psycho's lack of aura...", "Mepa is preparing to block Yuki...", "Serife is vibrating low..."],
-  men: ["I smell a scrote...", "I am launching the 'Block Him' protocol...", "I have zero time for dusty behavior...", "Hold on am humbling the local dusty..."]
+  fashion: ["Mepa sensing polyester energy...", "Mepa judging your fast-fashion choices...", "Mepa demands real luxury..."],
+  money: ["Mepa checking if you're actually high-value...", "Mepa smells an empty wallet...", "Mepa only talks in six figures..."],
+  guapa: ["Mepa shattering Guapa's mid aura...", "Guapa sit down..."],
+  psycho: ["Mepa diagnosing Psycho's lack of aura...", "Mepa preparing to block Yuki...", "Serife is vibrating low..."],
+  men: ["Mepa smelling a scrote...", "I am launching the 'Block Him' protocol...", "I have zero time for dusty behavior...", "Mepa humbling the local dusty..."]
 };
 
 const PersonalityView: React.FC = () => {
@@ -29,7 +30,7 @@ const PersonalityView: React.FC = () => {
     {
       id: '1',
       sender: 'Mepa',
-      content: "I'm Mepa. Don't waste my time with low vibrations. What do you want? 🥀",
+      content: "I am here. Don't waste my time with low vibrations. What do you want? 🥀",
       timestamp: new Date()
     }
   ]);
