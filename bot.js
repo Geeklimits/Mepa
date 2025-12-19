@@ -168,6 +168,260 @@ client.on('messageCreate', async (message) => {
     const content = message.content.toLowerCase();
     const triggers = ['love', 'breakup', 'boyfriend', 'fashion', 'money', 'hustle', 'men', 'dating'];
 
+    // --- COMMANDS FIRST ---
+
+    // .play <query>
+    if (message.content.startsWith('.play')) {
+        const query = message.content.replace('.play', '').trim();
+        const voiceChannel = message.member?.voice.channel;
+
+        if (!voiceChannel) return message.reply("Join a voice channel first. I don't sing to empty rooms. 💅");
+        if (!query) return message.reply("What am I playing? Silence? Give me a song.");
+
+        try {
+            console.log(`[MUSIC] [Session: ${botSessionId}] Attempting to play: ${query} for ${message.author.username}`);
+            // Check if it's a playlist link
+            const isPlaylist = query.includes('list=') || query.includes('/playlist');
+
+            await distube.play(voiceChannel, query, {
+                message,
+                textChannel: message.channel,
+                member: message.member,
+                selfDeafen: false // User asked why it was deafened
+            });
+            console.log(`[MUSIC] Play request submitted. Playlist: ${isPlaylist}`);
+            return; // Stop here
+        } catch (e) {
+            console.error("[MUSIC ERROR]", e);
+            return message.reply(`The speakers are bleeding: ${e.message.slice(0, 100)}. Probably your low-quality taste. 🙄`);
+        }
+    }
+
+    // .stop
+    if (message.content.startsWith('.stop')) {
+        distube.stop(message);
+        return message.channel.send("Music stopped. Finally, some peace. 🕯️");
+    }
+
+    // .skip
+    if (message.content.startsWith('.skip')) {
+        try {
+            await distube.skip(message);
+            return message.channel.send("Next. That one was getting boring anyway. ⛓️");
+        } catch (e) {
+            return message.reply("There's nothing else in the queue. You're alone with your thoughts now. 🥀");
+        }
+    }
+
+    // .volume <1-100>
+    if (message.content.startsWith('.volume')) {
+        const volume = parseInt(message.content.split(' ')[1]);
+        if (isNaN(volume) || volume < 1 || volume > 100) return message.reply("Volume must be 1-100. Don't be difficult.");
+        distube.setVolume(message, volume);
+        return message.channel.send(`Volume adjusted to ${volume}%. 🔊`);
+    }
+
+    // .shuffle
+    if (message.content.startsWith('.shuffle')) {
+        try {
+            await distube.shuffle(message);
+            return message.channel.send("Queue shuffled. Let's see what the universe has planned. 🔮");
+        } catch (e) {
+            return message.reply("I can't shuffle that. Maybe you should add more than one song first. 🙄");
+        }
+    }
+
+    // .recommend <mood/genre> (Music)
+    if (message.content.startsWith('.recommend')) {
+        const query = message.content.replace('.recommend', '').trim();
+        if (!query) return message.reply("Tell me the vibe. e.g., `.recommend dark feminine rap`");
+
+        try {
+            message.channel.sendTyping();
+            const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const response = await model.generateContent(`Generate a JSON list of 3 songs matching vibe "${query}". Format: [{"title": "Song", "artist": "Artist", "reason": "Why I like it"}]. Return ONLY JSON.`);
+            const text = response.response.text().replace(/```json|```/g, '').trim();
+            const songs = JSON.parse(text);
+
+            let replyText = `**My Curated Vibe for "${query}"** 🎧\n`;
+            songs.forEach(song => {
+                replyText += `- **${song.title}** by ${song.artist}: _${song.reason}_\n`;
+            });
+            return message.reply(replyText);
+        } catch (e) {
+            console.error(e);
+            return message.reply("My Spotify is lagging. Look it up yourself. 🙄");
+        }
+    }
+
+    // .help
+    if (message.content.startsWith('.help')) {
+        const embed = new EmbedBuilder()
+            .setColor('#D4AF37')
+            .setTitle('🔮 My Grimoire: Commands & Secrets')
+            .setDescription('I only respond to those with high standards. Use these wisely.')
+            .addFields(
+                { name: '🎵 Music', value: '`.play <song>`, `.stop`, `.skip`, `.volume <1-100>`, `.shuffle`, `.recommend <vibe>`', inline: false },
+                { name: '💅 Personality', value: 'Mention `mepa` or keywords (`money`, `fashion`, `love`). Ask for a roast: `roast my pfp`.', inline: false },
+                { name: '🛡️ Moderation', value: '`.clear <amt>`, `.mute @user`, `.warn @user`, `.kick @user`, `.ban @user`', inline: false },
+                { name: '🎭 Roles', value: '`.role @Role :emoji:`, `.roles`, `.delrole <msgId>`', inline: true },
+                { name: '⚙️ System', value: '`.help`, `.testwelcome`', inline: true }
+            )
+            .setFooter({ text: 'High Standards Only', iconURL: client.user.displayAvatarURL() })
+            .setTimestamp();
+
+        return message.channel.send({ embeds: [embed] });
+    }
+
+    // .vibecheck @user
+    if (message.content.startsWith('.vibecheck')) {
+        const target = message.mentions.members.first() || message.member;
+        const verdicts = [
+            "Your aura is giving 'clearance rack'. Mid at best. 💅",
+            "High frequency detected. You might actually be worth my time. ✨",
+            "Extremely low vibrations. I'm sensing a dusty energy. 🥀",
+            "Divine Feminine energy is strong here. A queen. 👑",
+            "The basicness is off the charts. Sit down. 🙄",
+            "Mystery is your strength. I approve. 🔮"
+        ];
+        const verdict = verdicts[Math.floor(Math.random() * verdicts.length)];
+        return message.reply(`**Vibe Check for ${target.user.username}:**\n${verdict}`);
+    }
+
+    // .clear / .sanitize
+    if (message.content.startsWith('.clear') || message.content.startsWith('.sanitize')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("You don't have the aura to delete messages. Sit down. 💅");
+        const args = message.content.split(' ');
+        const amount = parseInt(args[1]) || 10;
+        if (amount > 100) return message.reply("I can only clear 100 messages at a time.");
+
+        await message.channel.bulkDelete(amount, true).catch(console.error);
+        logAction('CLEARED', `#${message.channel.name}`, `${amount} messages deleted by ${message.author.username}`);
+        const msg = await message.channel.send(`Cleaned up ${amount} messages. They were mid anyway. 🗑️`);
+        return setTimeout(() => msg.delete(), 5000);
+    }
+
+    // .mute @user [reason] (Modern Timeout)
+    if (message.content.startsWith('.mute')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("You're not powerful enough to silence people. 💅");
+        const member = message.mentions.members.first();
+        if (!member) return message.reply("Who are we silencing? Tag them.");
+        const reason = message.content.split(' ').slice(2).join(' ') || "No reason given. Just being a dusty.";
+
+        try {
+            await member.timeout(60 * 60 * 1000, reason); // 1 hour timeout
+            logAction('MUTE', member.user.tag, reason);
+            return message.channel.send(`${member.user.username} has been put in the corner for an hour. Silence is golden. 🤫`);
+        } catch (e) {
+            return message.reply("I couldn't mute them. Maybe they have more aura than I thought. 🙄");
+        }
+    }
+
+    // .kick @user
+    if (message.content.startsWith('.kick')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers)) return message.reply("Nice try, but you're not an admin. 💅");
+        const memberToKick = message.mentions.members.first();
+        if (!memberToKick) return message.reply("Who are we kicking? Tag them.");
+        if (!memberToKick.kickable) return message.reply("I can't kick them. They might be too powerful (or invited by me).");
+
+        await memberToKick.kick("Kicked by Mepa command");
+        logAction('KICK', memberToKick.user.tag, `Kicked by ${message.author.tag}`);
+        return message.channel.send(`${memberToKick.user.username} has been removed. The vibe has improved immediately. ✨`);
+    }
+
+    // .ban @user
+    if (message.content.startsWith('.ban')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("You can't ban people. That's *my* job (and admins).");
+        const memberToBan = message.mentions.members.first();
+        if (!memberToBan) return message.reply("Tag the dusty you want to ban.");
+
+        await memberToBan.ban({ reason: "Banned by Mepa" });
+        logAction('BAN', memberToBan.user.tag, `Banned by ${message.author.tag}`);
+        return message.channel.send(`${memberToBan.user.username} is gone forever. Good riddance. 🔨`);
+    }
+
+    // .softban @user
+    if (message.content.startsWith('.softban')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("Softbanning is reserved for those with authority. 💅");
+        const member = message.mentions.members.first();
+        if (!member) return message.reply("Tag the person you want to softban.");
+
+        await member.ban({ deleteMessageSeconds: 604800, reason: "Softban by Mepa" });
+        await message.guild.members.unban(member.id, "Softban clean up");
+        logAction('SOFTBAN', member.user.tag, "Messages cleared via softban.");
+        return message.channel.send(`${member.user.username} has been softbanned. Their mess is gone, and they're technically allowed back. For now. 🧹`);
+    }
+
+    // .warn @user [reason]
+    if (message.content.startsWith('.warn')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("You can't issue warnings. 💅");
+        const member = message.mentions.members.first();
+        if (!member) return message.reply("Who are we warning?");
+        const reason = message.content.split(' ').slice(2).join(' ') || "Unspecified dusty behavior.";
+
+        logAction('WARN', member.user.tag, reason);
+        return message.channel.send(`${member.user.username}, consider this your only warning. Don't vibrate low in my presence. 🥀`);
+    }
+
+    // .role @role :emoji: (Setup Reaction Role)
+    if (message.content.startsWith('.role')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) return message.reply("You can't manage roles. Sit down. 💅");
+        const role = message.mentions.roles.first();
+        const emoji = message.content.split(' ').pop();
+        if (!role || !emoji) return message.reply("Usage: `.role @Role :emoji:`");
+
+        const reactionMsg = await message.channel.send(`React with ${emoji} to get the **${role.name}** role. Only if you're worthy. 🔮`);
+        await reactionMsg.react(emoji);
+
+        // Store in Supabase
+        const { error } = await supabase.from('reaction_roles').insert({
+            message_id: reactionMsg.id,
+            role_id: role.id,
+            emoji: emoji
+        });
+
+        if (error) console.error("Reaction Role DB Error:", error.message);
+        return;
+    }
+
+    // .roles (List active roles)
+    if (message.content.startsWith('.roles')) {
+        const { data, error } = await supabase.from('reaction_roles').select('*');
+        if (error) return message.reply("Could not fetch the elite roster. 🙄");
+
+        if (!data || data.length === 0) return message.reply("No reaction roles are currently active. Typical. 💅");
+
+        const embed = new EmbedBuilder()
+            .setColor('#D4AF37')
+            .setTitle('🔮 Active Reaction Roles')
+            .setDescription('Here are the messages currently granting status in this circle.')
+            .setTimestamp();
+
+        data.forEach((row, i) => {
+            embed.addFields({
+                name: `Setup #${i + 1}`,
+                value: `**Message ID**: \`${row.message_id}\`\n**Role**: <@&${row.role_id}>\n**Emoji**: ${row.emoji}`,
+                inline: false
+            });
+        });
+
+        return message.channel.send({ embeds: [embed] });
+    }
+
+    // .delrole <messageId>
+    if (message.content.startsWith('.delrole')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) return message.reply("You don't have the clearance. 💅");
+        const msgId = message.content.split(' ')[1];
+        if (!msgId) return message.reply("Which setup are we removing? Give me the Message ID.");
+
+        const { error } = await supabase.from('reaction_roles').delete().eq('message_id', msgId);
+        if (error) return message.reply("Failed to remove it. It's likely stuck. 🙄");
+
+        return message.reply(`Reaction role setup for \`${msgId}\` has been removed from the records. ✨`);
+    }
+
+    // --- AI TRIGGERS ---
+
     // --- REACTION BOT LOGIC ---
     if (triggers.some(t => content.includes(t))) {
         message.react('💅'); // React with sass
@@ -353,271 +607,23 @@ client.on('messageCreate', async (message) => {
         }
     }
 
-    // --- COMMANDS ---
-
-    // .clear / .sanitize
-    if (message.content.startsWith('.clear') || message.content.startsWith('.sanitize')) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) return message.reply("You don't have the aura to delete messages. Sit down. 💅");
-        const args = message.content.split(' ');
-        const amount = parseInt(args[1]) || 10;
-        if (amount > 100) return message.reply("I can only clear 100 messages at a time.");
-
-        await message.channel.bulkDelete(amount, true).catch(console.error);
-        logAction('CLEARED', `#${message.channel.name}`, `${amount} messages deleted by ${message.author.username}`);
-        const msg = await message.channel.send(`Cleaned up ${amount} messages. They were mid anyway. 🗑️`);
-        setTimeout(() => msg.delete(), 5000);
-    }
-
-    // .mute @user [reason] (Modern Timeout)
-    if (message.content.startsWith('.mute')) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("You're not powerful enough to silence people. 💅");
-        const member = message.mentions.members.first();
-        if (!member) return message.reply("Who are we silencing? Tag them.");
-        const reason = message.content.split(' ').slice(2).join(' ') || "No reason given. Just being a dusty.";
-
-        try {
-            await member.timeout(60 * 60 * 1000, reason); // 1 hour timeout
-            logAction('MUTE', member.user.tag, reason);
-            message.channel.send(`${member.user.username} has been put in the corner for an hour. Silence is golden. 🤫`);
-        } catch (e) {
-            message.reply("I couldn't mute them. Maybe they have more aura than I thought. 🙄");
-        }
-    }
-
-    // .kick @user
-    if (message.content.startsWith('.kick')) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers)) return message.reply("Nice try, but you're not an admin. 💅");
-        const memberToKick = message.mentions.members.first();
-        if (!memberToKick) return message.reply("Who are we kicking? Tag them.");
-        if (!memberToKick.kickable) return message.reply("I can't kick them. They might be too powerful (or invited by me).");
-
-        await memberToKick.kick("Kicked by Mepa command");
-        logAction('KICK', memberToKick.user.tag, `Kicked by ${message.author.tag}`);
-        message.channel.send(`${memberToKick.user.username} has been removed. The vibe has improved immediately. ✨`);
-    }
-
-    // .ban @user
-    if (message.content.startsWith('.ban')) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("You can't ban people. That's *my* job (and admins).");
-        const memberToBan = message.mentions.members.first();
-        if (!memberToBan) return message.reply("Tag the dusty you want to ban.");
-
-        await memberToBan.ban({ reason: "Banned by Mepa" });
-        logAction('BAN', memberToBan.user.tag, `Banned by ${message.author.tag}`);
-        message.channel.send(`${memberToBan.user.username} is gone forever. Good riddance. 🔨`);
-    }
-
-    // .softban @user
-    if (message.content.startsWith('.softban')) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) return message.reply("Softbanning is reserved for those with authority. 💅");
-        const member = message.mentions.members.first();
-        if (!member) return message.reply("Tag the person you want to softban.");
-
-        await member.ban({ deleteMessageSeconds: 604800, reason: "Softban by Mepa" });
-        await message.guild.members.unban(member.id, "Softban clean up");
-        logAction('SOFTBAN', member.user.tag, "Messages cleared via softban.");
-        message.channel.send(`${member.user.username} has been softbanned. Their mess is gone, and they're technically allowed back. For now. 🧹`);
-    }
-
-    // .warn @user [reason]
-    if (message.content.startsWith('.warn')) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) return message.reply("You can't issue warnings. 💅");
-        const member = message.mentions.members.first();
-        if (!member) return message.reply("Who are we warning?");
-        const reason = message.content.split(' ').slice(2).join(' ') || "Unspecified dusty behavior.";
-
-        logAction('WARN', member.user.tag, reason);
-        message.channel.send(`${member.user.username}, consider this your only warning. Don't vibrate low in my presence. 🥀`);
-    }
-
-    // .role @role :emoji: (Setup Reaction Role)
-    if (message.content.startsWith('.role')) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) return message.reply("You can't manage roles. Sit down. 💅");
-        const role = message.mentions.roles.first();
-        const emoji = message.content.split(' ').pop();
-        if (!role || !emoji) return message.reply("Usage: `.role @Role :emoji:`");
-
-        const reactionMsg = await message.channel.send(`React with ${emoji} to get the **${role.name}** role. Only if you're worthy. 🔮`);
-        await reactionMsg.react(emoji);
-
-        // Store in Supabase
-        const { error } = await supabase.from('reaction_roles').insert({
-            message_id: reactionMsg.id,
-            role_id: role.id,
-            emoji: emoji
-        });
-
-        if (error) console.error("Reaction Role DB Error:", error.message);
-    }
-
-    // .roles (List active roles)
-    if (message.content.startsWith('.roles')) {
-        const { data, error } = await supabase.from('reaction_roles').select('*');
-        if (error) return message.reply("Could not fetch the elite roster. 🙄");
-
-        if (!data || data.length === 0) return message.reply("No reaction roles are currently active. Typical. 💅");
-
-        const embed = new EmbedBuilder()
-            .setColor('#D4AF37')
-            .setTitle('🔮 Active Reaction Roles')
-            .setDescription('Here are the messages currently granting status in this circle.')
-            .setTimestamp();
-
-        data.forEach((row, i) => {
-            embed.addFields({
-                name: `Setup #${i + 1}`,
-                value: `**Message ID**: \`${row.message_id}\`\n**Role**: <@&${row.role_id}>\n**Emoji**: ${row.emoji}`,
-                inline: false
-            });
-        });
-
-        message.channel.send({ embeds: [embed] });
-    }
-
-    // .delrole <messageId>
-    if (message.content.startsWith('.delrole')) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) return message.reply("You don't have the clearance. 💅");
-        const msgId = message.content.split(' ')[1];
-        if (!msgId) return message.reply("Which setup are we removing? Give me the Message ID.");
-
-        const { error } = await supabase.from('reaction_roles').delete().eq('message_id', msgId);
-        if (error) return message.reply("Failed to remove it. It's likely stuck. 🙄");
-
-        message.reply(`Reaction role setup for \`${msgId}\` has been removed from the records. ✨`);
-    }
-
-    // --- MUSIC COMMANDS ---
-
-    // .play <query>
-    if (message.content.startsWith('.play')) {
-        const query = message.content.replace('.play', '').trim();
-        const voiceChannel = message.member.voice.channel;
-
-        if (!voiceChannel) return message.reply("Join a voice channel first. I don't sing to empty rooms. 💅");
-        if (!query) return message.reply("What am I playing? Silence? Give me a song.");
-
-        try {
-            console.log(`[MUSIC] Attempting to play: ${query} for ${message.author.username}`);
-            // Check if it's a playlist link
-            const isPlaylist = query.includes('list=') || query.includes('/playlist');
-
-            await distube.play(voiceChannel, query, {
-                message,
-                textChannel: message.channel,
-                member: message.member,
-            });
-            console.log(`[MUSIC] Play request submitted. Playlist: ${isPlaylist}`);
-        } catch (e) {
-            console.error("[MUSIC ERROR]", e);
-            message.reply(`The speakers are bleeding: ${e.message.slice(0, 100)}. Probably your low-quality taste. 🙄`);
-        }
-    }
-
-    // .stop
-    if (message.content.startsWith('.stop')) {
-        distube.stop(message);
-        message.channel.send("Music stopped. Finally, some peace. 🕯️");
-    }
-
-    // .skip
-    if (message.content.startsWith('.skip')) {
-        try {
-            await distube.skip(message);
-            message.channel.send("Next. That one was getting boring anyway. ⛓️");
-        } catch (e) {
-            message.reply("There's nothing else in the queue. You're alone with your thoughts now. 🥀");
-        }
-    }
-
-    // .volume <1-100>
-    if (message.content.startsWith('.volume')) {
-        const volume = parseInt(message.content.split(' ')[1]);
-        if (isNaN(volume) || volume < 1 || volume > 100) return message.reply("Volume must be 1-100. Don't be difficult.");
-        distube.setVolume(message, volume);
-        message.channel.send(`Volume adjusted to ${volume}%. 🔊`);
-    }
-
-    // .shuffle
-    if (message.content.startsWith('.shuffle')) {
-        try {
-            await distube.shuffle(message);
-            message.channel.send("Queue shuffled. Let's see what the universe has planned. 🔮");
-        } catch (e) {
-            message.reply("I can't shuffle that. Maybe you should add more than one song first. 🙄");
-        }
-    }
-
-    // .recommend <mood/genre> (Music)
-    if (message.content.startsWith('.recommend')) {
-        const query = message.content.replace('.recommend', '').trim();
-        if (!query) return message.reply("Tell me the vibe. e.g., `.recommend dark feminine rap`");
-
-        try {
-            message.channel.sendTyping();
-            const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
-            const response = await model.generateContent(`Generate a JSON list of 3 songs matching vibe "${query}". Format: [{"title": "Song", "artist": "Artist", "reason": "Why Mepa likes it"}]. Return ONLY JSON.`);
-            const text = response.response.text().replace(/```json|```/g, '').trim();
-            const songs = JSON.parse(text);
-
-            let replyText = `**Mepa's Curated Vibe for "${query}"** 🎧\n`;
-            songs.forEach(song => {
-                replyText += `- **${song.title}** by ${song.artist}: _${song.reason}_\n`;
-            });
-            message.reply(replyText);
-        } catch (e) {
-            console.error(e);
-            message.reply("My Spotify is lagging. Look it up yourself. 🙄");
-        }
-    }
-
-    // .help
-    if (message.content.startsWith('.help')) {
-        const embed = new EmbedBuilder()
-            .setColor('#D4AF37')
-            .setTitle('🔮 Mepa\'s Grimoire: Commands & Secrets')
-            .setDescription('I only respond to those with high standards. Use these wisely.')
-            .addFields(
-                { name: '🎵 Music', value: '`.play <song>`, `.stop`, `.skip`, `.volume <1-100>`, `.shuffle`, `.recommend <vibe>`', inline: false },
-                { name: '💅 Personality', value: 'Mention `mepa` or keywords (`money`, `fashion`, `love`). Ask for a roast: `roast my pfp`.', inline: false },
-                { name: '🛡️ Moderation', value: '`.clear <amt>`, `.mute @user`, `.warn @user`, `.kick @user`, `.ban @user`', inline: false },
-                { name: '🎭 Roles', value: '`.role @Role :emoji:`, `.roles`, `.delrole <msgId>`', inline: true },
-                { name: '⚙️ System', value: '`.help`, `.testwelcome`', inline: true }
-            )
-            .setFooter({ text: 'Mepa | High Standards Only', iconURL: client.user.displayAvatarURL() })
-            .setTimestamp();
-
-        message.channel.send({ embeds: [embed] });
-    }
-
-    // .vibecheck @user
-    if (message.content.startsWith('.vibecheck')) {
-        const target = message.mentions.members.first() || message.member;
+    // --- VERDICTS ---
+    if (message.content.startsWith('.testverdict')) {
         const verdicts = [
             "Your aura is giving 'clearance rack'. Mid at best. 💅",
             "High frequency detected. You might actually be worth my time. ✨",
             "Extremely low vibrations. I'm sensing a dusty energy. 🥀",
             "Divine Feminine energy is strong here. A queen. 👑",
             "The basicness is off the charts. Sit down. 🙄",
-            "Siren vibes. You have the power, don't waste it on scrotes. 🐍",
-            "Your energy is vibrating at a 'low value' frequency. Crystal cleanse required. 🔮",
-            "Unbothered and high-value. We love to see it. 🥂"
+            "Mystery is your strength. I approve. 🔮"
         ];
-        const randomVerdict = verdicts[Math.floor(Math.random() * verdicts.length)];
-
-        const embed = new EmbedBuilder()
-            .setColor('#D4AF37')
-            .setTitle(`🔮 Vibe Check: ${target.user.username}`)
-            .setDescription(randomVerdict)
-            .setThumbnail(target.user.displayAvatarURL({ dynamic: true }))
-            .setTimestamp();
-
-        message.channel.send({ embeds: [embed] });
+        return message.reply(verdicts[Math.floor(Math.random() * verdicts.length)]);
     }
 
     // Test Welcome Command
     if (message.content.startsWith('.testwelcome')) {
         client.emit('guildMemberAdd', message.member);
-        message.reply("Simulating welcome event... check the welcome channel. 🎀");
+        return message.reply("Simulating welcome event... check the welcome channel. 🎀");
     }
 });
 
